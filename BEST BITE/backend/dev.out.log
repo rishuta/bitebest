@@ -1,0 +1,19 @@
+
+> backend@1.0.0 dev
+> node server.js
+
+◇ injected env (2) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+MongoDB connected to database: bitebest
+BiteBest backend running on port 5000
+Food price records found: 4
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 500
+Food price records found: 501
