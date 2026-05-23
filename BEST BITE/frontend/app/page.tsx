@@ -311,12 +311,13 @@ export default function Home() {
               <div className="mt-10 space-y-5">
                 <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <label htmlFor="food-search" className="sr-only">
-                    Search for any food item
+                    Search restaurant or food item
                   </label>
                   <input
                     id="food-search"
                     type="text"
                     value={searchQuery}
+                    autoComplete="off"
                     onChange={(event) => {
                       const nextQuery = event.target.value;
                       setSearchQuery(nextQuery);
@@ -334,6 +335,9 @@ export default function Home() {
                     <span>Search</span>
                   </button>
                 </form>
+                <p className="text-sm text-[#6B6B5F] sm:max-w-xl">
+                  Examples: Chicken Biryani • Burger • Meghana Foods • Pizza
+                </p>
 
                 {suggestions.length > 0 && (
                   <div className="rounded-[18px] border border-[#DDD2BD] bg-[#FFFDF7] p-2 shadow-sm">
