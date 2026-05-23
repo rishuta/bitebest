@@ -128,7 +128,6 @@ const ChartCard = ({ title, children }: { title: string; children: ReactNode }) 
 );
 
 export default function AdminPage() {
-  const hasAdminSession = typeof window !== 'undefined' && localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
   const [records, setRecords] = useState<FoodPrice[]>([]);
   const [form, setForm] = useState<FoodPriceForm>(emptyForm);
   const [loginEmail, setLoginEmail] = useState('');
@@ -136,8 +135,8 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [editingId, setEditingId] = useState('');
   const [message, setMessage] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(hasAdminSession);
-  const [isLoading, setIsLoading] = useState(hasAdminSession);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [topSearches, setTopSearches] = useState<TopSearch[]>([]);
@@ -157,6 +156,17 @@ export default function AdminPage() {
     const data = await response.json();
     setTopSearches(data);
   };
+
+  // Initialize auth state from localStorage on mount
+  useEffect(() => {
+    const isAdmin = localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+    setIsAuthenticated(isAdmin);
+    if (isAdmin) {
+      setIsLoading(true);
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -383,7 +393,13 @@ export default function AdminPage() {
 
   const logout = () => {
     localStorage.removeItem(ADMIN_SESSION_KEY);
-    window.location.href = '/';
+    setIsAuthenticated(false);
+    setLoginEmail('');
+    setLoginPassword('');
+    setLoginError('');
+    setEditingId('');
+    setMessage('');
+    setIsModalOpen(false);
   };
 
   const handleLogin = (event: FormEvent<HTMLFormElement>) => {
@@ -410,8 +426,8 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F7F3EA] px-6 text-[#1F2A1D]">
-        <section className="w-full max-w-md rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-8 shadow-[0_20px_50px_rgba(85,107,47,0.08)]">
+      <main className="flex min-h-screen items-center justify-center bg-[#F7F3EA] px-6 py-8 text-[#1F2A1D]">
+        <section className="w-full max-w-[420px] rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-6 shadow-[0_20px_50px_rgba(85,107,47,0.08)]">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#556B2F]">Admin Login</p>
           <h1 className="mt-3 text-3xl font-semibold text-[#243119]">BiteBest Admin</h1>
           <p className="mt-2 text-sm text-[#6B6B5F]">Login to manage food comparison records.</p>
