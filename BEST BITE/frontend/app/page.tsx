@@ -673,20 +673,65 @@ export default function Home() {
 
                                     {expandedRestaurantItem === item && (
                                       <div className="mt-3 w-full rounded-[20px] border border-[#D8CFBF] bg-[#FFFDF7] p-4 text-sm shadow-sm">
-                                        <dl className="space-y-2">
-                                          {itemGroup.map((option) => (
-                                            <div
-                                              key={option._id}
-                                              className="flex items-center justify-between gap-3 border-b border-[#EEE8DA] pb-2 last:border-b-0 last:pb-0"
-                                            >
-                                              <div>
-                                                <p className="font-semibold text-[#243119]">{option.platform}</p>
-                                                <p className="text-xs text-[#6B6B5F]">{option.restaurant}</p>
+                                        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+                                          <div className="space-y-3 rounded-[18px] border border-[#EEE8DA] bg-[#F7F3EA] p-4">
+                                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
+                                              Price Breakdown
+                                            </p>
+                                            <div className="grid gap-2">
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Food Price</span>
+                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.foodPrice)}</span>
                                               </div>
-                                              <span className="text-sm font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(option))}</span>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Delivery Fee</span>
+                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.deliveryFee || 0)}</span>
+                                              </div>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Packaging Fee</span>
+                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.packagingFee || 0)}</span>
+                                              </div>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Offer Type</span>
+                                                <span className="font-semibold text-[#243119]">{getOfferLabel(cheapestPlatform)}</span>
+                                              </div>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Discount Applied</span>
+                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.discountApplied || 0)}</span>
+                                              </div>
                                             </div>
-                                          ))}
-                                        </dl>
+                                            <div className="mt-3 rounded-[16px] bg-[#EEF3DF] px-3 py-3">
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-sm font-semibold text-[#243119]">Final Price</span>
+                                                <span className="text-lg font-bold text-[#1F2A1D]">{formatCurrency(getFinalPrice(cheapestPlatform))}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <div className="space-y-3 rounded-[18px] border border-[#EEE8DA] bg-[#F7F3EA] p-4">
+                                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
+                                              Restaurant Info
+                                            </p>
+                                            <div className="grid gap-2">
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Restaurant</span>
+                                                <span className="font-semibold text-[#243119]">{cheapestPlatform.restaurant}</span>
+                                              </div>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Platform</span>
+                                                <span className="font-semibold text-[#243119]">{cheapestPlatform.platform}</span>
+                                              </div>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Rating</span>
+                                                <span className="font-semibold text-[#243119]">{formatRating(cheapestPlatform.rating)}</span>
+                                              </div>
+                                              <div className="grid grid-cols-[1fr_auto] gap-3">
+                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">ETA</span>
+                                                <span className="font-semibold text-[#243119]">{cheapestPlatform.eta || '—'}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
