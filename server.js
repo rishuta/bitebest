@@ -40,6 +40,14 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    console.log('Railway env check:');
+    console.log('PORT exists:', !!process.env.PORT);
+    console.log('MONGO_URI exists:', !!process.env.MONGO_URI);
+    console.log(
+      'Mongo env keys:',
+      Object.keys(process.env).filter((key) => key.toLowerCase().includes('mongo'))
+    );
+
     await connectDB();
 
     app.listen(PORT, () => {
