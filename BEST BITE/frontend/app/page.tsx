@@ -8,6 +8,7 @@ import BiteBestLogo from '@/components/BiteBestLogo';
 const popularSearches = ['Chicken Biryani', 'Pizza', 'Burger', 'Paneer Tikka', 'Chole Bhature'];
 const platformFilters = ['All', 'Swiggy', 'Zomato', 'EatSure', 'Magicpin'];
 const initialVisibleRows = 10;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const ADMIN_SESSION_KEY = 'bitebestAdmin';
 const RECENT_SEARCHES_KEY = 'bitebestRecentSearches';
 
@@ -151,7 +152,7 @@ export default function Home() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/foodprices/search?query=${encodeURIComponent(cleanQuery)}`
+        `${API_BASE_URL}/api/foodprices/search?query=${encodeURIComponent(cleanQuery)}`
       );
 
       if (!response.ok) {
@@ -193,7 +194,7 @@ export default function Home() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/foodprices/suggestions?query=${encodeURIComponent(cleanQuery)}`
+        `${API_BASE_URL}/api/foodprices/suggestions?query=${encodeURIComponent(cleanQuery)}`
       );
       const data = await response.json();
       setSuggestions(data);

@@ -18,8 +18,9 @@ const ADMIN_EMAIL = 'admin@bitebest.com';
 const ADMIN_PASSWORD = 'bitebest123';
 const ADMIN_SESSION_KEY = 'bitebestAdmin';
 const ADMIN_SESSION_TOKEN = 'bitebest-admin-session';
-const API_URL = 'http://localhost:5000/api/foodprices';
-const ANALYTICS_URL = 'http://localhost:5000/api/analytics/top-searches';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = `${API_BASE_URL}/api/foodprices`;
+const ANALYTICS_URL = `${API_BASE_URL}/api/analytics/top-searches`;
 const chartColors = ['#556B2F', '#8A9A5B', '#C2A86B', '#7D8F69', '#B68D40', '#A3B18A'];
 
 type FoodPrice = {
