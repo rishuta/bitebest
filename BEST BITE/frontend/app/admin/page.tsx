@@ -135,8 +135,20 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [editingId, setEditingId] = useState('');
   const [message, setMessage] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+
+    return localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [topSearches, setTopSearches] = useState<TopSearch[]>([]);
@@ -156,17 +168,6 @@ export default function AdminPage() {
     const data = await response.json();
     setTopSearches(data);
   };
-
-  // Initialize auth state from localStorage on mount
-  useEffect(() => {
-    const isAdmin = localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
-    setIsAuthenticated(isAdmin);
-    if (isAdmin) {
-      setIsLoading(true);
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {

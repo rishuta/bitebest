@@ -7,6 +7,7 @@ import BiteBestLogo from '@/components/BiteBestLogo';
 
 const popularSearches = ['Chicken Biryani', 'Pizza', 'Burger', 'Paneer Tikka', 'Chole Bhature'];
 const platformFilters = ['All', 'Swiggy', 'Zomato', 'EatSure', 'Magicpin'];
+
 const initialVisibleRows = 10;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const ADMIN_SESSION_KEY = 'bitebestAdmin';
@@ -93,26 +94,6 @@ const getOfferLabel = (foodPrice: FoodPrice) => {
   return foodPrice.offerType;
 };
 
-const formatOfferType = (offerType?: string) => {
-  if (!offerType || offerType === 'none') {
-    return 'None';
-  }
-
-  if (offerType === 'percentage') {
-    return 'Percentage';
-  }
-
-  if (offerType === 'flat') {
-    return 'Flat';
-  }
-
-  if (offerType === 'freeDelivery') {
-    return 'Free Delivery';
-  }
-
-  return offerType;
-};
-
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<FoodPrice[]>([]);
@@ -121,6 +102,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [searchMessage, setSearchMessage] = useState('');
   const [expandedResultId, setExpandedResultId] = useState('');
+  const [expandedRestaurantItem, setExpandedRestaurantItem] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('All');
   const [visibleRows, setVisibleRows] = useState(initialVisibleRows);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -240,8 +222,63 @@ export default function Home() {
     [results, selectedPlatform]
   );
 
+  const restaurantQuery = searchQuery.trim().toLowerCase();
+  const restaurantMatchCount = filteredResults.filter((result) =>
+    result.restaurant.toLowerCase().includes(restaurantQuery)
+  ).length;
+  const itemMatchCount = filteredResults.filter((result) =>
+    result.item.toLowerCase().includes(restaurantQuery)
+  ).length;
+  const isRestaurantSearch =
+    restaurantQuery.length > 0 && restaurantMatchCount >= itemMatchCount && restaurantMatchCount > 0;
+
+  const restaurantResults = useMemo(
+    () =>
+      isRestaurantSearch
+        ? filteredResults.filter((result) => result.restaurant.toLowerCase().includes(restaurantQuery))
+        : [],
+    [filteredResults, isRestaurantSearch, restaurantQuery]
+  );
+
+  const restaurantItems = useMemo(() => {
+    const groups = new Map<string, FoodPrice[]>();
+
+    restaurantResults.forEach((result) => {
+      const itemKey = result.item || 'Unknown item';
+      const group = groups.get(itemKey);
+
+      if (group) {
+        group.push(result);
+      } else {
+        groups.set(itemKey, [result]);
+      }
+    });
+
+    return Array.from(groups.entries())
+      .map(([item, itemGroup]) => [
+        item,
+        itemGroup.sort((a, b) => getFinalPrice(a) - getFinalPrice(b)),
+      ] as [string, FoodPrice[]])
+      .sort(([leftItem], [rightItem]) => leftItem.localeCompare(rightItem));
+  }, [restaurantResults]);
+
+  const cheapestRestaurantItem = restaurantItems.length
+    ? restaurantItems
+        .map(([, itemGroup]) => itemGroup[0])
+        .sort((a, b) => getFinalPrice(a) - getFinalPrice(b))[0]
+    : undefined;
+
+  const restaurantItemCount = restaurantItems.length;
+  const restaurantName = restaurantResults[0]?.restaurant || '';
+  const restaurantHighestCheapestPrice = Math.max(
+    0,
+    ...restaurantItems.map(([, itemGroup]) => getFinalPrice(itemGroup[0]))
+  );
+  const restaurantSavingsVsHighest = cheapestRestaurantItem
+    ? restaurantHighestCheapestPrice - getFinalPrice(cheapestRestaurantItem)
+    : 0;
+
   const visibleResults = filteredResults.slice(0, visibleRows);
-  const bestDealId = filteredResults[0]?._id;
   const bestDeal = filteredResults[0];
   const bestDealPrice = bestDeal ? getFinalPrice(bestDeal) : 0;
   const highestPrice = filteredResults.reduce(
@@ -250,12 +287,37 @@ export default function Home() {
   );
   const savingsVsHighest = Math.max(highestPrice - bestDealPrice, 0);
   const comparedRestaurants = new Set(results.map((result) => result.restaurant));
+  const hasComparison = filteredResults.length > 1;
+
+  const visibleResultsByItem = useMemo(() => {
+    const groups = new Map<string, FoodPrice[]>();
+
+    visibleResults.forEach((result) => {
+      const itemKey = result.item || 'Unknown item';
+      const group = groups.get(itemKey);
+
+      if (group) {
+        group.push(result);
+      } else {
+        groups.set(itemKey, [result]);
+      }
+    });
+
+    return Array.from(groups.entries())
+      .map(([item, itemGroup]) => [
+        item,
+        itemGroup.sort((a, b) => getFinalPrice(a) - getFinalPrice(b)),
+      ] as [string, FoodPrice[]])
+      .sort(([leftItem], [rightItem]) => leftItem.localeCompare(rightItem));
+  }, [visibleResults]);
   const comparisonTitle =
-    results.length > 0 && comparedRestaurants.size === 1
-      ? `${results[0].item} \u2022 ${results[0].restaurant}`
-      : results.length > 0
-        ? `${results[0].item} \u2022 Price Comparison`
-        : 'Food price matches';
+    isRestaurantSearch && restaurantName
+      ? `${restaurantName} • ${restaurantItemCount} item${restaurantItemCount === 1 ? '' : 's'} available`
+      : results.length > 0 && comparedRestaurants.size === 1
+        ? `${results[0].item} • ${results[0].restaurant}`
+        : results.length > 0
+          ? `${results[0].item} • Price Comparison`
+          : 'Food price matches';
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#1F2A1D]">
@@ -451,26 +513,23 @@ export default function Home() {
 
             {!isLoading && !error && results.length > 0 && (
               <div className="space-y-2">
-                <div className="rounded-[18px] border border-[#D8CFBF] bg-[#EEE8DA] px-4 py-3 shadow-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="rounded-[24px] border border-[#A8B879] bg-[#EEF3DF] p-6 shadow-sm">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#556B2F]">Recommended Choice</p>
-                      <p className="mt-1 text-sm font-semibold text-[#243119]">Best Available Price</p>
-                      <p className="mt-1 text-sm font-medium text-[#243119]">
-                        {bestDeal ? `${bestDeal.platform} • ${bestDeal.restaurant}` : '-'}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 sm:justify-end">
-                      <p className="text-2xl font-semibold text-[#556B2F]">
-                        {bestDeal ? formatCurrency(getFinalPrice(bestDeal)) : '-'}
-                      </p>
-                      <div className="text-xs font-medium text-[#6B6B5F] sm:text-right">
-                        <p>
-                          Lowest payable amount among {filteredResults.length} option
-                          {filteredResults.length === 1 ? '' : 's'}.
-                        </p>
-                        <p className="font-semibold text-[#243119]">Save {formatCurrency(savingsVsHighest)} vs highest option</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#556B2F]">Best overall deal today</p>
+                      <p className="mt-3 text-4xl font-semibold tracking-tight text-[#243119]">{bestDeal ? formatCurrency(getFinalPrice(bestDeal)) : '—'}</p>
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-[#556B2F]">
+                        <span className="font-medium text-[#243119]">Platform: {bestDeal?.platform || '-'}</span>
+                        <span className="font-medium text-[#243119]">Item: {bestDeal?.item || '-'}</span>
                       </div>
+                    </div>
+                    <div className="flex flex-col items-start gap-2 text-right sm:items-end">
+                      <span className="rounded-full bg-[#556B2F] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F7F3EA]">
+                        BEST DEAL
+                      </span>
+                      <p className="text-sm font-semibold text-[#243119]">
+                        Savings {formatCurrency(savingsVsHighest)} vs highest
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -506,88 +565,212 @@ export default function Home() {
                     )}
                   </div>
                   <div className="space-y-3 pt-3">
-                    {visibleResults.map((result, index) => (
-                      <article
-                        key={result._id}
-                        className={`rounded-[18px] border p-4 transition ${
-                          result._id === bestDealId
-                            ? 'border-[#A8B879] bg-[#EEF3DF] shadow-[inset_4px_0_0_#556B2F]'
-                            : 'border-[#DDD2BD] bg-[#FFFDF7]'
-                        }`}
-                      >
-                        <div className="grid gap-4 md:grid-cols-[1.1fr_1.2fr_auto] md:items-center">
-                          <div className="min-w-0">
-                            <div className="flex items-start gap-3">
-                              <span className="rounded-full bg-[#E8DDC8] px-3 py-1 text-sm font-semibold text-[#556B2F]">
-                                #{index + 1}
-                              </span>
+                    {!hasComparison ? (
+                      <div className="rounded-[24px] border border-[#D8CFBF] bg-[#FFF9EE] p-6 text-center shadow-sm">
+                        <p className="text-sm font-semibold text-[#556B2F]">No comparison available</p>
+                        <p className="mt-2 text-sm text-[#6B6B5F]">
+                          Only one platform option exists for this search, so comparison data is not available yet.
+                        </p>
+                      </div>
+                    ) : isRestaurantSearch ? (
+                      <div className="space-y-6">
+                        {cheapestRestaurantItem && (
+                          <section className="rounded-[24px] border border-[#A8B879] bg-[#EEF3DF] p-6 shadow-[0_10px_30px_rgba(85,107,47,0.08)]">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#556B2F]">
+                              Cheapest item at {restaurantName}
+                            </p>
+                            <p className="mt-3 text-3xl font-semibold text-[#243119]">{cheapestRestaurantItem.item}</p>
+                            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold text-[#556B2F]">
+                              <span>{cheapestRestaurantItem.platform}</span>
+                              <span>{formatRating(cheapestRestaurantItem.rating)}</span>
+                              <span>{cheapestRestaurantItem.eta || '—'}</span>
+                            </div>
+                            <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
                               <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-lg font-semibold text-[#243119]">{result.platform}</p>
-                                  {result._id === bestDealId && (
-                                    <span className="rounded-full bg-[#556B2F] px-2.5 py-1 text-[0.68rem] font-semibold text-[#F7F3EA]">
-                                      Best Deal
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-1 text-sm font-medium text-[#6B6B5F]">{result.restaurant}</p>
+                                <p className="text-4xl font-semibold text-[#243119]">{formatCurrency(getFinalPrice(cheapestRestaurantItem))}</p>
+                                <p className="mt-1 text-sm text-[#556B2F]">
+                                  Save {formatCurrency(Math.max(restaurantSavingsVsHighest, 0))} vs highest item
+                                </p>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => setExpandedRestaurantItem(expandedRestaurantItem === cheapestRestaurantItem.item ? '' : cheapestRestaurantItem.item)}
+                                className="rounded-full bg-[#556B2F] px-5 py-2 text-sm font-semibold text-[#F7F3EA] transition hover:bg-[#4a5f24]"
+                              >
+                                {expandedRestaurantItem === cheapestRestaurantItem.item ? 'Hide details' : 'Details'}
+                              </button>
                             </div>
-                          </div>
 
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-[#556B2F]">
-                            <span>{formatRating(result.rating)}</span>
-                            <span>{result.eta || '-'}</span>
-                            <span>{getOfferLabel(result)}</span>
-                          </div>
+                            {expandedRestaurantItem === cheapestRestaurantItem.item && (
+                              <div className="mt-5 rounded-[20px] border border-[#D8CFBF] bg-[#FFFDF7] p-4 text-sm text-[#243119] shadow-sm">
+                                <dl className="space-y-3">
+                                  {[
+                                    ['Food Price', formatCurrency(cheapestRestaurantItem.foodPrice)],
+                                    ['Delivery', formatCurrency(cheapestRestaurantItem.deliveryFee || 0)],
+                                    ['Packaging', formatCurrency(cheapestRestaurantItem.packagingFee || 0)],
+                                    ['Discount', `-${formatCurrency(cheapestRestaurantItem.discountApplied || 0)}`],
+                                  ].map(([label, value]) => (
+                                    <div key={label} className="flex justify-between gap-3">
+                                      <dt className="font-medium text-[#6B6B5F]">{label}</dt>
+                                      <dd className="font-semibold text-[#243119]">{value}</dd>
+                                    </div>
+                                  ))}
+                                  <div className="mt-4 border-t border-[#D8CFBF] pt-4">
+                                    <div className="flex justify-between gap-3">
+                                      <dt className="font-semibold text-[#243119]">Final</dt>
+                                      <dd className="text-lg font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(cheapestRestaurantItem))}</dd>
+                                    </div>
+                                  </div>
+                                </dl>
+                              </div>
+                            )}
+                          </section>
+                        )}
 
-                          <div className="flex items-end justify-between gap-4 md:flex-col md:justify-center md:text-right">
-                            <div>
-                              <p className="text-3xl font-semibold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
-                              <p className="mt-1 text-xs font-semibold text-[#6B6B5F]">
-                                {result._id === bestDealId
-                                  ? 'Best price'
-                                  : `${formatCurrency(getFinalPrice(result) - bestDealPrice)} more than best`}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setExpandedResultId(expandedResultId === result._id ? '' : result._id)}
-                              className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
-                            >
-                              {expandedResultId === result._id ? 'Hide' : 'Details'}
-                            </button>
+                        <div className="rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-4 shadow-sm">
+                          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#6B6B5F]">Other items available</p>
+                          <div className="space-y-3">
+                            {restaurantItems
+                              .filter(([item]) => item !== cheapestRestaurantItem?.item)
+                              .map(([item, itemGroup]) => {
+                                const cheapestPlatform = itemGroup[0];
+                                return (
+                                  <div key={item} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] px-4 py-3 shadow-sm">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-[#243119]">{item}</p>
+                                        <p className="mt-1 text-xs text-[#6B6B5F]">{cheapestPlatform.platform}</p>
+                                      </div>
+                                      <div className="flex items-center gap-4 text-sm font-semibold text-[#556B2F]">
+                                        <span>{formatCurrency(getFinalPrice(cheapestPlatform))}</span>
+                                        <span>{cheapestPlatform.eta || '—'}</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedRestaurantItem(expandedRestaurantItem === item ? '' : item)}
+                                        className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
+                                      >
+                                        {expandedRestaurantItem === item ? 'Hide' : 'Details'}
+                                      </button>
+                                    </div>
+
+                                    {expandedRestaurantItem === item && (
+                                      <div className="mt-3 w-full rounded-[20px] border border-[#D8CFBF] bg-[#FFFDF7] p-4 text-sm shadow-sm">
+                                        <dl className="space-y-2">
+                                          {itemGroup.map((option) => (
+                                            <div
+                                              key={option._id}
+                                              className="flex items-center justify-between gap-3 border-b border-[#EEE8DA] pb-2 last:border-b-0 last:pb-0"
+                                            >
+                                              <div>
+                                                <p className="font-semibold text-[#243119]">{option.platform}</p>
+                                                <p className="text-xs text-[#6B6B5F]">{option.restaurant}</p>
+                                              </div>
+                                              <span className="text-sm font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(option))}</span>
+                                            </div>
+                                          ))}
+                                        </dl>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                           </div>
                         </div>
-
-                        {expandedResultId === result._id && (
-                          <div className="mt-4 max-w-md rounded-[18px] border border-[#D8CFBF] bg-[#EEE8DA] p-4 shadow-sm">
-                            <p className="mb-3 text-sm font-semibold text-[#243119]">{result.platform} Breakdown</p>
-                            <dl className="space-y-2 text-sm">
-                              {[
-                                ['Food Price', formatCurrency(result.foodPrice)],
-                                ['Delivery Fee', formatCurrency(result.deliveryFee || 0)],
-                                ['Packaging Fee', formatCurrency(result.packagingFee || 0)],
-                                ['Offer Type', formatOfferType(result.offerType)],
-                                ['Discount Applied', formatCurrency(result.discountApplied || 0)],
-                                ['Restaurant', result.restaurant],
-                                ['Rating', formatRating(result.rating)],
-                                ['ETA', result.eta || '-'],
-                              ].map(([label, value]) => (
-                                <div key={label} className="grid grid-cols-[130px_1fr] gap-3 sm:grid-cols-[150px_1fr]">
-                                  <dt className="text-[#6B6B5F]">{label}</dt>
-                                  <dd className="font-semibold text-[#243119]">{value}</dd>
-                                </div>
-                              ))}
-                              <div className="mt-3 grid grid-cols-[130px_1fr] gap-3 border-t border-[#D8CFBF] pt-3 sm:grid-cols-[150px_1fr]">
-                                <dt className="font-semibold text-[#243119]">Final Price</dt>
-                                <dd className="text-lg font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(result))}</dd>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {visibleResultsByItem.map(([item, itemGroup]) => (
+                          <section key={item} className="rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-5 shadow-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DDD2BD] pb-4">
+                              <div className="min-w-0">
+                                <p className="text-2xl font-semibold text-[#243119]">{item}</p>
+                                <p className="mt-1 text-sm font-medium text-[#6B6B5F]">{itemGroup[0].restaurant}</p>
                               </div>
-                            </dl>
-                          </div>
-                        )}
-                      </article>
-                    ))}
+                              <p className="text-sm font-semibold text-[#556B2F]">
+                                {itemGroup.length} option{itemGroup.length === 1 ? '' : 's'}
+                              </p>
+                            </div>
+
+                            <div className="mt-5 rounded-[24px] border border-[#A8B879] bg-[#EEF3DF] p-5 shadow-[0_10px_30px_rgba(85,107,47,0.08)]">
+                              {itemGroup.map((result) => (
+                                <article
+                                  key={result._id}
+                                  className={`mb-4 rounded-[18px] border p-4 transition ${
+                                    result._id === bestDeal?._id
+                                      ? 'border-[#A8B879] bg-[#EEF3DF] shadow-[inset_4px_0_0_#556B2F]'
+                                      : 'border-[#DDD2BD] bg-[#FFFDF7]'
+                                  }`}
+                                >
+                                  <div className="grid gap-4 md:grid-cols-[1.1fr_1.2fr_auto] md:items-center">
+                                    <div className="min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-lg font-semibold text-[#243119]">{result.platform}</p>
+                                        {result._id === bestDeal?._id && (
+                                          <span className="rounded-full bg-[#556B2F] px-2.5 py-1 text-[0.68rem] font-semibold text-[#F7F3EA]">
+                                            Best Deal
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="mt-1 text-sm font-medium text-[#6B6B5F]">{result.restaurant}</p>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-[#556B2F]">
+                                      <span>{formatRating(result.rating)}</span>
+                                      <span>{result.eta || '-'}</span>
+                                      <span>{getOfferLabel(result)}</span>
+                                    </div>
+
+                                    <div className="flex items-end justify-between gap-4 md:flex-col md:justify-center md:text-right">
+                                      <div>
+                                        <p className="text-3xl font-semibold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
+                                        <p className="mt-1 text-xs font-semibold text-[#6B6B5F]">
+                                          {result._id === bestDeal?._id
+                                            ? 'Best price'
+                                            : `${formatCurrency(getFinalPrice(result) - bestDealPrice)} more than best`}
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedResultId(expandedResultId === result._id ? '' : result._id)}
+                                        className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
+                                      >
+                                        {expandedResultId === result._id ? 'Hide' : 'Details'}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {expandedResultId === result._id && (
+                                    <div className="mt-4 max-w-md rounded-[18px] border border-[#EEE8DA] bg-[#FFFDF7] p-4 shadow-sm">
+                                      <p className="mb-3 text-sm font-semibold text-[#243119]">{result.platform} Breakdown</p>
+                                      <dl className="space-y-2 text-sm">
+                                        {[
+                                          ['Food Price', formatCurrency(result.foodPrice)],
+                                          ['Delivery Fee', formatCurrency(result.deliveryFee || 0)],
+                                          ['Packaging Fee', formatCurrency(result.packagingFee || 0)],
+                                          ['Discount Applied', formatCurrency(result.discountApplied || 0)],
+                                          ['Rating', formatRating(result.rating)],
+                                          ['ETA', result.eta || '-'],
+                                        ].map(([label, value]) => (
+                                          <div key={label} className="grid grid-cols-[130px_1fr] gap-3 sm:grid-cols-[150px_1fr]">
+                                            <dt className="text-[#6B6B5F]">{label}</dt>
+                                            <dd className="font-semibold text-[#243119]">{value}</dd>
+                                          </div>
+                                        ))}
+                                        <div className="mt-3 grid grid-cols-[130px_1fr] gap-3 border-t border-[#D8CFBF] pt-3 sm:grid-cols-[150px_1fr]">
+                                          <dt className="font-semibold text-[#243119]">Final Price</dt>
+                                          <dd className="text-lg font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(result))}</dd>
+                                        </div>
+                                      </dl>
+                                    </div>
+                                  )}
+                                </article>
+                              ))}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                 {visibleRows < filteredResults.length && (
