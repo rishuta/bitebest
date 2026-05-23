@@ -1,11 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
+require('dotenv').config();
 const connectDB = require('./utils/db');
 const foodPriceRoutes = require('./routes/foodPriceRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
-
-dotenv.config();
 
 const app = express();
 
