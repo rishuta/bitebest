@@ -636,14 +636,14 @@ export default function Home() {
                                 const cheapestPlatform = itemGroup[0];
                                 return (
                                   <div key={item} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] px-4 py-3 shadow-sm">
-                                    <div className="grid gap-3 sm:grid-cols-[1fr_140px_140px_auto] sm:items-center">
+                                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-[1fr_140px_140px_110px] sm:items-center">
                                       <div className="min-w-0 space-y-1">
                                         <p className="text-sm font-semibold text-[#243119]">{item}</p>
-                                        <p className="text-xs text-[#6B6B5F]">{cheapestPlatform.platform}</p>
+                                        <p className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">{cheapestPlatform.platform}</p>
                                       </div>
 
                                       <div className="min-w-0">
-                                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F]">
+                                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
                                           Final Price
                                         </p>
                                         <p className="mt-1 text-lg font-bold text-[#243119]">
@@ -652,8 +652,8 @@ export default function Home() {
                                       </div>
 
                                       <div className="min-w-0">
-                                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F]">
-                                          Delivery Time
+                                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
+                                          ETA
                                         </p>
                                         <p className="mt-1 text-lg font-semibold text-[#243119]">
                                           {cheapestPlatform.eta || '—'}
