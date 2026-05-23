@@ -636,22 +636,39 @@ export default function Home() {
                                 const cheapestPlatform = itemGroup[0];
                                 return (
                                   <div key={item} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] px-4 py-3 shadow-sm">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                      <div className="min-w-0">
+                                    <div className="grid gap-3 sm:grid-cols-[1fr_140px_140px_auto] sm:items-center">
+                                      <div className="min-w-0 space-y-1">
                                         <p className="text-sm font-semibold text-[#243119]">{item}</p>
-                                        <p className="mt-1 text-xs text-[#6B6B5F]">{cheapestPlatform.platform}</p>
+                                        <p className="text-xs text-[#6B6B5F]">{cheapestPlatform.platform}</p>
                                       </div>
-                                      <div className="flex items-center gap-4 text-sm font-semibold text-[#556B2F]">
-                                        <span>{formatCurrency(getFinalPrice(cheapestPlatform))}</span>
-                                        <span>{cheapestPlatform.eta || '—'}</span>
+
+                                      <div className="min-w-0">
+                                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F]">
+                                          Final Price
+                                        </p>
+                                        <p className="mt-1 text-lg font-bold text-[#243119]">
+                                          {formatCurrency(getFinalPrice(cheapestPlatform))}
+                                        </p>
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => setExpandedRestaurantItem(expandedRestaurantItem === item ? '' : item)}
-                                        className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
-                                      >
-                                        {expandedRestaurantItem === item ? 'Hide' : 'Details'}
-                                      </button>
+
+                                      <div className="min-w-0">
+                                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F]">
+                                          Delivery Time
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold text-[#243119]">
+                                          {cheapestPlatform.eta || '—'}
+                                        </p>
+                                      </div>
+
+                                      <div className="flex justify-start sm:justify-end">
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedRestaurantItem(expandedRestaurantItem === item ? '' : item)}
+                                          className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
+                                        >
+                                          {expandedRestaurantItem === item ? 'Hide' : 'Details'}
+                                        </button>
+                                      </div>
                                     </div>
 
                                     {expandedRestaurantItem === item && (
