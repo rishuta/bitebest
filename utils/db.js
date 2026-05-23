@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  const mongoUri = process.env.MONGO_URI;
 
   if (!mongoUri) {
     throw new Error('Please set MONGO_URI to your MongoDB Atlas connection string');
