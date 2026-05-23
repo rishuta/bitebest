@@ -4,43 +4,31 @@ export default function BiteBestLogo() {
   return (
     <Link href="/" className="group inline-flex items-center gap-3" aria-label="BiteBest home">
       <svg
-        width="38"
-        height="38"
-        viewBox="0 0 38 38"
+        width="40"
+        height="40"
+        viewBox="0 0 40 40"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
         className="shrink-0"
       >
-        <circle cx="19" cy="19" r="16" fill="#F5F1E8" stroke="#243119" strokeWidth="2" />
-        <circle cx="19" cy="19" r="11.5" stroke="#556B2F" strokeWidth="1.2" strokeDasharray="2 3" opacity="0.58" />
-        <path d="M19 5.5V8.6M32.5 19H29.4M19 32.5V29.4M5.5 19H8.6" stroke="#556B2F" strokeWidth="1.4" strokeLinecap="round" />
+        <rect width="40" height="40" rx="10" fill="#3F4F20" />
         <text
-          x="19"
-          y="23"
+          x="50%"
+          y="52%"
           textAnchor="middle"
-          fontSize="11"
-          fontFamily="Arial, sans-serif"
-          fontWeight="700"
-          fill="#243119"
-          opacity="0.18"
+          dominantBaseline="middle"
+          fontFamily="Inter, system-ui, sans-serif"
+          fontWeight="800"
+          fontSize="18"
+          fill="#E8DFC3"
         >
-          {'\u20b9'}
+          BB
         </text>
-        <g
-          className="origin-center transition-transform duration-300 ease-out group-hover:rotate-[5deg]"
-          style={{ transformBox: 'fill-box' }}
-        >
-          <path d="M15.2 22.8L25.8 12.2" stroke="#243119" strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M24.3 10.7L27.2 13.6" stroke="#243119" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M25.6 9.4L28.5 12.3" stroke="#243119" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M14 24L12.1 25.9" stroke="#556B2F" strokeWidth="2.4" strokeLinecap="round" />
-        </g>
-        <circle cx="19" cy="19" r="2.1" fill="#556B2F" />
       </svg>
-      <span className="text-xl font-semibold tracking-tight">
-        <span className="text-[#243119]">Bite</span>
-        <span className="text-[#556B2F]">Best</span>
+      <span className="text-xl font-semibold tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <span className="text-[#3F4F20]">Bite</span>
+        <span className="text-[#7F9135]">Best</span>
       </span>
     </Link>
   );

@@ -1,4 +1,4 @@
-<svg width="64" height="64" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="40" height="40" rx="10" fill="#3F4F20" />
   <text
     x="50%"
@@ -7,7 +7,7 @@
     dominantBaseline="middle"
     fontFamily="Inter, system-ui, sans-serif"
     fontWeight="800"
-    fontSize="28"
+    fontSize="16"
     fill="#E8DFC3"
   >
     BB
