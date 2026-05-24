@@ -7499,4 +7499,50 @@
     "rating": 5.1,
     "eta": "48 mins"
   }
+  ,
+  {
+    "restaurant": "Shawarma House",
+    "normalizedRestaurant": "shawarma house",
+    "item": "Chicken Shawarma",
+    "normalizedItem": "chicken shawarma",
+    "platform": "Swiggy",
+    "foodPrice": 120,
+    "deliveryFee": 25,
+    "packagingFee": 10,
+    "offerType": "flat",
+    "offerValue": 20,
+    "minOrder": 0,
+    "rating": 4.4,
+    "eta": "28 mins"
+  },
+  {
+    "restaurant": "Shawarma House",
+    "normalizedRestaurant": "shawarma house",
+    "item": "Chicken Shawarma",
+    "normalizedItem": "chicken shawarma",
+    "platform": "Zomato",
+    "foodPrice": 125,
+    "deliveryFee": 30,
+    "packagingFee": 10,
+    "offerType": "none",
+    "offerValue": 0,
+    "minOrder": 0,
+    "rating": 4.2,
+    "eta": "32 mins"
+  },
+  {
+    "restaurant": "Shawarma House",
+    "normalizedRestaurant": "shawarma house",
+    "item": "Chicken Shawarma",
+    "normalizedItem": "chicken shawarma",
+    "platform": "Magicpin",
+    "foodPrice": 115,
+    "deliveryFee": 20,
+    "packagingFee": 8,
+    "offerType": "percentage",
+    "offerValue": 10,
+    "minOrder": 0,
+    "rating": 4.5,
+    "eta": "25 mins"
+  }
 ]

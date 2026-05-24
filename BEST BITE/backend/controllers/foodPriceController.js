@@ -48,6 +48,46 @@ const buildFuzzyPatternFromNormalized = (normalizedInput) => {
   return chars.map((c) => escapeRegex(c)).join('.*');
 };
 
+// Alias map for common misspellings / alternate forms. Keys/values should be normalized.
+const ALIAS_MAP = {
+  'shwarma': 'shawarma',
+  'shawarma': 'shawarma',
+  "mc donalds": 'mcdonalds',
+  'mcdonalds': 'mcdonalds',
+  "mc donald's": 'mcdonalds',
+  'dominos': 'dominos',
+  'domino': 'dominos',
+  'burgerking': 'burger king',
+};
+
+// getSearchAliases returns an array of normalized aliases for a given query.
+// It keeps the original normalized query and adds mapped replacements where applicable.
+const getSearchAliases = (rawQuery) => {
+  const aliases = new Set();
+  if (!rawQuery && rawQuery !== 0) return [];
+
+  const normalizedQuery = normalizeSearch(rawQuery);
+  aliases.add(normalizedQuery);
+
+  // For each mapping key, if the normalized query contains the key as a substring,
+  // add a variant where the key is replaced with the mapped value. This handles
+  // multi-word phrases like "chicken shwarma" -> "chicken shawarma".
+  Object.keys(ALIAS_MAP).forEach((rawKey) => {
+    const key = normalizeSearch(rawKey);
+    const mapped = normalizeSearch(ALIAS_MAP[rawKey]);
+
+    if (key && normalizedQuery.includes(key)) {
+      const replaced = normalizedQuery.split(key).join(mapped);
+      aliases.add(replaced);
+    }
+
+    // Also include the mapped term on its own (helps when user searches the alias only)
+    aliases.add(mapped);
+  });
+
+  return Array.from(aliases).filter(Boolean);
+};
+
 const searchFoodPrices = async (req, res, next) => {
   try {
     const { query } = req.query;
@@ -60,16 +100,24 @@ const searchFoodPrices = async (req, res, next) => {
 
     await SearchAnalytics.create({ searchTerm: rawQuery });
 
-    const normalizedQuery = normalizeSearch(rawQuery);
-    const fuzzyPattern = buildFuzzyPatternFromNormalized(normalizedQuery);
+    // Build aliases for the query and search across them using fuzzy patterns
+    const aliases = getSearchAliases(rawQuery);
 
     const orClauses = [];
-    if (fuzzyPattern) {
-      orClauses.push({ normalizedRestaurant: { $regex: fuzzyPattern } });
-      orClauses.push({ normalizedItem: { $regex: fuzzyPattern } });
+    aliases.forEach((alias) => {
+      const pattern = buildFuzzyPatternFromNormalized(alias);
+      if (pattern) {
+        orClauses.push({ normalizedRestaurant: { $regex: pattern, $options: 'i' } });
+        orClauses.push({ normalizedItem: { $regex: pattern, $options: 'i' } });
+      }
+      // also allow matching against platform text
+      orClauses.push({ platform: { $regex: alias, $options: 'i' } });
+    });
+
+    // fallback: if no clauses produced, search by raw query as-is
+    if (orClauses.length === 0) {
+      orClauses.push({ platform: { $regex: rawQuery, $options: 'i' } });
     }
-    // keep platform fuzzy match on original platform field
-    orClauses.push({ platform: { $regex: rawQuery, $options: 'i' } });
 
     const foodPrices = await FoodPrice.find({ $or: orClauses });
 
@@ -149,24 +197,31 @@ const getSearchSuggestions = async (req, res, next) => {
     }
 
     const rawQuery = String(query).trim();
-    const normalizedQuery = normalizeSearch(rawQuery);
-    const fuzzyPattern = buildFuzzyPatternFromNormalized(normalizedQuery);
+    const aliases = getSearchAliases(rawQuery);
 
     const orClauses = [];
-    if (fuzzyPattern) {
-      orClauses.push({ normalizedRestaurant: { $regex: fuzzyPattern } });
-      orClauses.push({ normalizedItem: { $regex: fuzzyPattern } });
+    aliases.forEach((alias) => {
+      const pattern = buildFuzzyPatternFromNormalized(alias);
+      if (pattern) {
+        orClauses.push({ normalizedRestaurant: { $regex: pattern, $options: 'i' } });
+        orClauses.push({ normalizedItem: { $regex: pattern, $options: 'i' } });
+      }
+      orClauses.push({ platform: { $regex: alias, $options: 'i' } });
+    });
+
+    // fallback
+    if (orClauses.length === 0) {
+      orClauses.push({ platform: { $regex: rawQuery, $options: 'i' } });
     }
-    orClauses.push({ platform: { $regex: rawQuery, $options: 'i' } });
 
     const foodPrices = await FoodPrice.find({ $or: orClauses }).select('restaurant item platform').limit(20);
 
-    // Normalize suggestions and filter by normalized inclusion
+    // Normalize suggestions and filter by any alias inclusion
     const allValues = foodPrices.flatMap((fp) => [fp.item, fp.restaurant, fp.platform]);
     const uniqueValues = [...new Set(allValues)];
 
     const suggestions = uniqueValues
-      .filter((value) => normalizeSearch(value).includes(normalizedQuery))
+      .filter((value) => aliases.some((alias) => normalizeSearch(value).includes(alias)))
       .slice(0, 6);
 
     res.json(suggestions);
