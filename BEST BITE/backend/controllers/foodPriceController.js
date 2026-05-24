@@ -38,7 +38,7 @@ const getFoodPrices = async (req, res, next) => {
 };
 
 // Helpers for forgiving search: build fuzzy regex from normalized query
-const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\]/g, '\\$&');
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildFuzzyPatternFromNormalized = (normalizedInput) => {
   if (!normalizedInput) return '';
