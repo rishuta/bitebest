@@ -459,25 +459,7 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              {/* Grouped restaurant-level summary (cheapest item + platform) */}
-              {groupedResults.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  {groupedResults.map((g) => (
-                    <article key={`${g.restaurant}::${g.item}`} className="rounded-lg border border-[#DDD2BD] bg-[#FFFDF7] p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-[#1F2A1D]">{g.restaurant}</p>
-                          <p className="mt-0.5 text-lg font-semibold text-[#556B2F]">{g.item}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-[#6B6B5F]">{g.badge}</p>
-                          <p className="mt-1 text-xs text-[#6B6B5F]">{g.comparisonLine}</p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+
             </div>
 
             <div className="flex justify-center">
@@ -587,274 +569,86 @@ export default function Home() {
                       <p className="text-xs font-medium text-[#6B6B5F]">First {visibleResults.length} visible</p>
                     )}
                   </div>
-                  <div className="space-y-3 pt-3">
+                  <div className="space-y-6 pt-3">
                     {!hasComparison ? (
                       <div className="rounded-[24px] border border-[#D8CFBF] bg-[#FFF9EE] p-6 text-center shadow-sm">
                         <p className="text-sm font-semibold text-[#556B2F]">No comparison available</p>
                         <p className="mt-2 text-sm text-[#6B6B5F]">
-                          Only one platform option exists for this search, so comparison data is not available yet.
+                          Only one platform option exists for this search.
                         </p>
                       </div>
-                    ) : isRestaurantSearch ? (
-                      <div className="space-y-6">
-                        {cheapestRestaurantItem && (
-                          <section className="rounded-[24px] border border-[#A8B879] bg-[#EEF3DF] p-6 shadow-[0_10px_30px_rgba(85,107,47,0.08)]">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#556B2F]">
-                              Cheapest item at {restaurantName}
-                            </p>
-                            <p className="mt-3 text-3xl font-semibold text-[#243119]">{cheapestRestaurantItem.item}</p>
-                            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold text-[#556B2F]">
-                              <span>{cheapestRestaurantItem.platform}</span>
-                              <span>{formatRating(cheapestRestaurantItem.rating)}</span>
-                              <span>{cheapestRestaurantItem.eta || '—'}</span>
-                            </div>
-                            <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                              <div>
-                                <p className="text-4xl font-semibold text-[#243119]">{formatCurrency(getFinalPrice(cheapestRestaurantItem))}</p>
-                                <p className="mt-1 text-sm text-[#556B2F]">
-                                  Save {formatCurrency(Math.max(restaurantSavingsVsHighest, 0))} vs highest item
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setExpandedRestaurantItem(expandedRestaurantItem === cheapestRestaurantItem.item ? '' : cheapestRestaurantItem.item)}
-                                className="rounded-full bg-[#556B2F] px-5 py-2 text-sm font-semibold text-[#F7F3EA] transition hover:bg-[#4a5f24]"
-                              >
-                                {expandedRestaurantItem === cheapestRestaurantItem.item ? 'Hide details' : 'Details'}
-                              </button>
-                            </div>
-
-                            {expandedRestaurantItem === cheapestRestaurantItem.item && (
-                              <div className="mt-5 rounded-[20px] border border-[#D8CFBF] bg-[#FFFDF7] p-4 text-sm text-[#243119] shadow-sm">
-                                <dl className="space-y-3">
-                                  {[
-                                    ['Food Price', formatCurrency(cheapestRestaurantItem.foodPrice)],
-                                    ['Delivery', formatCurrency(cheapestRestaurantItem.deliveryFee || 0)],
-                                    ['Packaging', formatCurrency(cheapestRestaurantItem.packagingFee || 0)],
-                                    ['Discount', `-${formatCurrency(cheapestRestaurantItem.discountApplied || 0)}`],
-                                  ].map(([label, value]) => (
-                                    <div key={label} className="flex justify-between gap-3">
-                                      <dt className="font-medium text-[#6B6B5F]">{label}</dt>
-                                      <dd className="font-semibold text-[#243119]">{value}</dd>
-                                    </div>
-                                  ))}
-                                  <div className="mt-4 border-t border-[#D8CFBF] pt-4">
-                                    <div className="flex justify-between gap-3">
-                                      <dt className="font-semibold text-[#243119]">Final</dt>
-                                      <dd className="text-lg font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(cheapestRestaurantItem))}</dd>
-                                    </div>
-                                  </div>
-                                </dl>
-                              </div>
-                            )}
-                          </section>
-                        )}
-
-                        <div className="rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-4 shadow-sm">
-                          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#6B6B5F]">Other items available</p>
-                          <div className="space-y-3">
-                            {restaurantItems
-                              .filter(([item]) => item !== cheapestRestaurantItem?.item)
-                              .map(([item, itemGroup]) => {
-                                const cheapestPlatform = itemGroup[0];
-                                return (
-                                  <div key={item} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] px-4 py-3 shadow-sm">
-                                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-[1fr_140px_140px_110px] sm:items-center">
-                                      <div className="min-w-0 space-y-1">
-                                        <p className="text-sm font-semibold text-[#243119]">{item}</p>
-                                        <p className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">{cheapestPlatform.platform}</p>
-                                      </div>
-
-                                      <div className="min-w-0">
-                                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
-                                          Final Price
-                                        </p>
-                                        <p className="mt-1 text-lg font-bold text-[#243119]">
-                                          {formatCurrency(getFinalPrice(cheapestPlatform))}
-                                        </p>
-                                      </div>
-
-                                      <div className="min-w-0">
-                                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
-                                          ETA
-                                        </p>
-                                        <p className="mt-1 text-lg font-semibold text-[#243119]">
-                                          {cheapestPlatform.eta || '—'}
-                                        </p>
-                                      </div>
-
-                                      <div className="flex justify-start sm:justify-end">
-                                        <button
-                                          type="button"
-                                          onClick={() => setExpandedRestaurantItem(expandedRestaurantItem === item ? '' : item)}
-                                          className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
-                                        >
-                                          {expandedRestaurantItem === item ? 'Hide' : 'Details'}
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {expandedRestaurantItem === item && (
-                                      <div className="mt-3 w-full rounded-[20px] border border-[#D8CFBF] bg-[#FFFDF7] p-4 text-sm shadow-sm">
-                                        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                                          <div className="space-y-3 rounded-[18px] border border-[#EEE8DA] bg-[#F7F3EA] p-4">
-                                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
-                                              Price Breakdown
-                                            </p>
-                                            <div className="grid gap-2">
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Food Price</span>
-                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.foodPrice)}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Delivery Fee</span>
-                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.deliveryFee || 0)}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Packaging Fee</span>
-                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.packagingFee || 0)}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Offer Type</span>
-                                                <span className="font-semibold text-[#243119]">{getOfferLabel(cheapestPlatform)}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Discount Applied</span>
-                                                <span className="font-semibold text-[#243119]">{formatCurrency(cheapestPlatform.discountApplied || 0)}</span>
-                                              </div>
-                                            </div>
-                                            <div className="mt-3 rounded-[16px] bg-[#EEF3DF] px-3 py-3">
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-sm font-semibold text-[#243119]">Final Price</span>
-                                                <span className="text-lg font-bold text-[#1F2A1D]">{formatCurrency(getFinalPrice(cheapestPlatform))}</span>
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div className="space-y-3 rounded-[18px] border border-[#EEE8DA] bg-[#F7F3EA] p-4">
-                                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
-                                              Restaurant Info
-                                            </p>
-                                            <div className="grid gap-2">
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Restaurant</span>
-                                                <span className="font-semibold text-[#243119]">{cheapestPlatform.restaurant}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Platform</span>
-                                                <span className="font-semibold text-[#243119]">{cheapestPlatform.platform}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">Rating</span>
-                                                <span className="font-semibold text-[#243119]">{formatRating(cheapestPlatform.rating)}</span>
-                                              </div>
-                                              <div className="grid grid-cols-[1fr_auto] gap-3">
-                                                <span className="text-xs uppercase tracking-[0.18em] text-[#6B6B5F]">ETA</span>
-                                                <span className="font-semibold text-[#243119]">{cheapestPlatform.eta || '—'}</span>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      </div>
                     ) : (
-                      <div className="space-y-6">
-                        {visibleResultsByItem.map(([item, itemGroup]) => (
-                          <section key={item} className="rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-5 shadow-sm">
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DDD2BD] pb-4">
-                              <div className="min-w-0">
-                                <p className="text-2xl font-semibold text-[#243119]">{item}</p>
-                                <p className="mt-1 text-sm font-medium text-[#6B6B5F]">{itemGroup[0].restaurant}</p>
+                      <>
+                        {visibleResultsByItem.map(([item, itemGroup]) => {
+                          const cheapestOption = itemGroup[0];
+                          const cheapestPrice = getFinalPrice(cheapestOption);
+                          
+                          return (
+                            <section key={item} className="rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-6 shadow-sm">
+                              {/* Header: Restaurant • Item */}
+                              <div className="border-b border-[#DDD2BD] pb-4">
+                                <h3 className="text-lg font-semibold text-[#243119]">
+                                  {itemGroup[0].restaurant} <span className="text-[#6B6B5F]">•</span> {item}
+                                </h3>
                               </div>
-                              <p className="text-sm font-semibold text-[#556B2F]">
-                                {itemGroup.length} option{itemGroup.length === 1 ? '' : 's'}
-                              </p>
-                            </div>
 
-                            <div className="mt-5 rounded-[24px] border border-[#A8B879] bg-[#EEF3DF] p-5 shadow-[0_10px_30px_rgba(85,107,47,0.08)]">
-                              {itemGroup.map((result) => (
-                                <article
-                                  key={result._id}
-                                  className={`mb-4 rounded-[18px] border p-4 transition ${
-                                    result._id === bestDeal?._id
-                                      ? 'border-[#A8B879] bg-[#EEF3DF] shadow-[inset_4px_0_0_#556B2F]'
-                                      : 'border-[#DDD2BD] bg-[#FFFDF7]'
-                                  }`}
-                                >
-                                  <div className="grid gap-4 md:grid-cols-[1.1fr_1.2fr_auto] md:items-center">
-                                    <div className="min-w-0">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-lg font-semibold text-[#243119]">{result.platform}</p>
-                                        {result._id === bestDeal?._id && (
-                                          <span className="rounded-full bg-[#556B2F] px-2.5 py-1 text-[0.68rem] font-semibold text-[#F7F3EA]">
-                                            Best Deal
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="mt-1 text-sm font-medium text-[#6B6B5F]">{result.restaurant}</p>
-                                    </div>
+                              {/* Best Price Today Section */}
+                              <div className="mt-5 rounded-[20px] border-2 border-[#A8B879] bg-[#EEF3DF] p-5">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#556B2F]">Best Price Today</p>
+                                <p className="mt-3 text-4xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
+                                <p className="mt-2 text-sm font-semibold text-[#556B2F]">{cheapestOption.platform}</p>
+                              </div>
 
-                                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-[#556B2F]">
-                                      <span>{formatRating(result.rating)}</span>
-                                      <span>{result.eta || '-'}</span>
-                                      <span>{getOfferLabel(result)}</span>
-                                    </div>
-
-                                    <div className="flex items-end justify-between gap-4 md:flex-col md:justify-center md:text-right">
-                                      <div>
-                                        <p className="text-3xl font-semibold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
-                                        <p className="mt-1 text-xs font-semibold text-[#6B6B5F]">
-                                          {result._id === bestDeal?._id
-                                            ? 'Best price'
-                                            : `${formatCurrency(getFinalPrice(result) - bestDealPrice)} more than best`}
-                                        </p>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => setExpandedResultId(expandedResultId === result._id ? '' : result._id)}
-                                        className="rounded-full bg-[#E8DDC8] px-4 py-2 text-xs font-semibold text-[#1F2A1D] transition hover:bg-[#DDD2BD]"
-                                      >
-                                        {expandedResultId === result._id ? 'Hide' : 'Details'}
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {expandedResultId === result._id && (
-                                    <div className="mt-4 max-w-md rounded-[18px] border border-[#EEE8DA] bg-[#FFFDF7] p-4 shadow-sm">
-                                      <p className="mb-3 text-sm font-semibold text-[#243119]">{result.platform} Breakdown</p>
-                                      <dl className="space-y-2 text-sm">
-                                        {[
-                                          ['Food Price', formatCurrency(result.foodPrice)],
-                                          ['Delivery Fee', formatCurrency(result.deliveryFee || 0)],
-                                          ['Packaging Fee', formatCurrency(result.packagingFee || 0)],
-                                          ['Discount Applied', formatCurrency(result.discountApplied || 0)],
-                                          ['Rating', formatRating(result.rating)],
-                                          ['ETA', result.eta || '-'],
-                                        ].map(([label, value]) => (
-                                          <div key={label} className="grid grid-cols-[130px_1fr] gap-3 sm:grid-cols-[150px_1fr]">
-                                            <dt className="text-[#6B6B5F]">{label}</dt>
-                                            <dd className="font-semibold text-[#243119]">{value}</dd>
-                                          </div>
-                                        ))}
-                                        <div className="mt-3 grid grid-cols-[130px_1fr] gap-3 border-t border-[#D8CFBF] pt-3 sm:grid-cols-[150px_1fr]">
-                                          <dt className="font-semibold text-[#243119]">Final Price</dt>
-                                          <dd className="text-lg font-semibold text-[#556B2F]">{formatCurrency(getFinalPrice(result))}</dd>
+                              {/* Platform Comparison Rows */}
+                              <div className="mt-5 space-y-2">
+                                {itemGroup.map((result) => {
+                                  const priceDiff = getFinalPrice(result) - cheapestPrice;
+                                  const isCheapest = priceDiff === 0;
+                                  
+                                  return (
+                                    <div
+                                      key={result._id}
+                                      className={`rounded-[16px] border px-4 py-3 transition ${
+                                        isCheapest
+                                          ? 'border-[#A8B879] bg-[#EEF3DF] shadow-sm'
+                                          : 'border-[#DDD2BD] bg-[#FFFDF7]'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-semibold text-[#243119]">{result.platform}</p>
+                                          {isCheapest && (
+                                            <span className="mt-1 inline-block rounded-full bg-[#556B2F] px-2.5 py-0.5 text-[0.65rem] font-semibold text-[#F7F3EA]">
+                                              Best Deal
+                                            </span>
+                                          )}
                                         </div>
-                                      </dl>
+                                        <div className="text-right">
+                                          <p className="text-base font-bold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
+                                          {!isCheapest && (
+                                            <p className="mt-0.5 text-xs font-semibold text-[#E74C3C]">
+                                              +{formatCurrency(priceDiff)}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
-                                  )}
-                                </article>
-                              ))}
-                            </div>
-                          </section>
-                        ))}
-                      </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Savings Statement */}
+                              {itemGroup.length > 1 && (
+                                <div className="mt-5 rounded-[16px] bg-[#F7F3EA] p-4 text-center">
+                                  <p className="text-sm font-semibold text-[#243119]">
+                                    You save {formatCurrency(Math.max(...itemGroup.map(r => getFinalPrice(r))) - cheapestPrice)} by choosing {cheapestOption.platform}
+                                  </p>
+                                </div>
+                              )}
+                            </section>
+                          );
+                        })}
+                      </>
                     )}
                   </div>
 
