@@ -3,7 +3,9 @@ const mongoose = require("mongoose");
 const foodPriceSchema = new mongoose.Schema(
   {
     restaurant: { type: String, required: true, trim: true },
+    normalizedRestaurant: { type: String, index: true },
     item: { type: String, required: true, trim: true },
+    normalizedItem: { type: String, index: true },
     platform: { type: String, required: true, trim: true },
     rating: { type: Number },
     eta: { type: String, trim: true },
@@ -21,5 +23,18 @@ const foodPriceSchema = new mongoose.Schema(
   },
   { timestamps: true, collection: "foodprices" }
 );
+
+// Populate normalized fields before save
+try {
+  const normalizeSearch = require('../utils/normalizeSearch');
+
+  foodPriceSchema.pre('save', function (next) {
+    if (this.restaurant) this.normalizedRestaurant = normalizeSearch(this.restaurant);
+    if (this.item) this.normalizedItem = normalizeSearch(this.item);
+    next();
+  });
+} catch (e) {
+  // If utils can't be required during some operations (like build-time), skip hook
+}
 
 module.exports = mongoose.model("FoodPrice", foodPriceSchema);

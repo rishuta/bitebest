@@ -2,11 +2,14 @@ const mongoose = require('mongoose');
 const FoodPrice = require('../models/FoodPrice');
 const SearchAnalytics = require('../models/SearchAnalytics');
 const calculateFinalPrice = require('../utils/priceEngine');
+const normalizeSearch = require('../utils/normalizeSearch');
 
 const buildFoodPricePayload = (body) => {
   const payload = {
     restaurant: body.restaurant,
+    normalizedRestaurant: body.restaurant ? normalizeSearch(body.restaurant) : undefined,
     item: body.item,
+    normalizedItem: body.item ? normalizeSearch(body.item) : undefined,
     platform: body.platform,
     foodPrice: body.foodPrice,
     deliveryFee: body.deliveryFee,
@@ -34,6 +37,17 @@ const getFoodPrices = async (req, res, next) => {
   }
 };
 
+// Helpers for forgiving search: build fuzzy regex from normalized query
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\]/g, '\\$&');
+
+const buildFuzzyPatternFromNormalized = (normalizedInput) => {
+  if (!normalizedInput) return '';
+  // remove spaces for character based fuzzy matching
+  const compact = String(normalizedInput).replace(/\s+/g, '');
+  const chars = compact.split('');
+  return chars.map((c) => escapeRegex(c)).join('.*');
+};
+
 const searchFoodPrices = async (req, res, next) => {
   try {
     const { query } = req.query;
@@ -42,20 +56,67 @@ const searchFoodPrices = async (req, res, next) => {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
-    const cleanQuery = query.trim();
+    const rawQuery = String(query).trim();
 
-    await SearchAnalytics.create({
-      searchTerm: cleanQuery,
+    await SearchAnalytics.create({ searchTerm: rawQuery });
+
+    const normalizedQuery = normalizeSearch(rawQuery);
+    const fuzzyPattern = buildFuzzyPatternFromNormalized(normalizedQuery);
+
+    const orClauses = [];
+    if (fuzzyPattern) {
+      orClauses.push({ normalizedRestaurant: { $regex: fuzzyPattern } });
+      orClauses.push({ normalizedItem: { $regex: fuzzyPattern } });
+    }
+    // keep platform fuzzy match on original platform field
+    orClauses.push({ platform: { $regex: rawQuery, $options: 'i' } });
+
+    const foodPrices = await FoodPrice.find({ $or: orClauses });
+
+    // Group by restaurant + item to present comparison-ready results
+    const groups = {};
+
+    foodPrices.forEach((fp) => {
+      const obj = fp.toObject();
+      const priceDetails = calculateFinalPrice(obj);
+      const key = `${obj.restaurant}||${obj.item}`;
+
+      if (!groups[key]) {
+        groups[key] = {
+          restaurant: obj.restaurant,
+          item: obj.item,
+          entries: [],
+        };
+      }
+
+      groups[key].entries.push({
+        platform: obj.platform,
+        foodPrice: obj.foodPrice,
+        deliveryFee: obj.deliveryFee,
+        packagingFee: obj.packagingFee,
+        finalPrice: priceDetails.finalPrice,
+      });
     });
 
-    const foodPrices = await FoodPrice.find({
-      $or: [
-        { restaurant: { $regex: cleanQuery, $options: 'i' } },
-        { item: { $regex: cleanQuery, $options: 'i' } },
-        { platform: { $regex: cleanQuery, $options: 'i' } },
-      ],
+    const results = Object.values(groups).map((g) => {
+      // sort entries by finalPrice
+      g.entries.sort((a, b) => a.finalPrice - b.finalPrice);
+      const cheapest = g.entries[0];
+      const others = g.entries.slice(1);
+
+      return {
+        restaurant: g.restaurant,
+        item: g.item,
+        cheapestPlatform: cheapest.platform,
+        cheapestPrice: cheapest.finalPrice,
+        platforms: g.entries.map((e) => ({ platform: e.platform, price: e.finalPrice })),
+        // UI-friendly badge text fields frontend can use
+        badge: `Cheapest: ${cheapest.platform} ₹${cheapest.finalPrice}`,
+        comparisonLine: g.entries.map((e) => `${e.platform} ₹${e.finalPrice}`).join(' | '),
+      };
     });
 
+    // Also prepare flat entries (backwards compatible)
     const resultsWithPrices = foodPrices
       .map((foodPrice) => {
         const foodPriceObject = foodPrice.toObject();
@@ -67,13 +128,13 @@ const searchFoodPrices = async (req, res, next) => {
           bestDeal: false,
         };
       })
-      .sort((firstResult, secondResult) => firstResult.finalPrice - secondResult.finalPrice);
+      .sort((a, b) => a.finalPrice - b.finalPrice);
 
-    if (resultsWithPrices.length > 0) {
-      resultsWithPrices[0].bestDeal = true;
-    }
+    if (resultsWithPrices.length > 0) resultsWithPrices[0].bestDeal = true;
 
-    res.json(resultsWithPrices);
+    results.sort((a, b) => a.cheapestPrice - b.cheapestPrice);
+
+    res.json({ grouped: results, entries: resultsWithPrices });
   } catch (error) {
     next(error);
   }
@@ -87,23 +148,25 @@ const getSearchSuggestions = async (req, res, next) => {
       return res.json([]);
     }
 
-    const cleanQuery = query.trim();
-    const foodPrices = await FoodPrice.find({
-      $or: [
-        { restaurant: { $regex: cleanQuery, $options: 'i' } },
-        { item: { $regex: cleanQuery, $options: 'i' } },
-        { platform: { $regex: cleanQuery, $options: 'i' } },
-      ],
-    })
-      .select('restaurant item platform')
-      .limit(20);
+    const rawQuery = String(query).trim();
+    const normalizedQuery = normalizeSearch(rawQuery);
+    const fuzzyPattern = buildFuzzyPatternFromNormalized(normalizedQuery);
 
-    const suggestions = [
-      ...new Set(
-        foodPrices.flatMap((foodPrice) => [foodPrice.item, foodPrice.restaurant, foodPrice.platform])
-      ),
-    ]
-      .filter((value) => value.toLowerCase().includes(cleanQuery.toLowerCase()))
+    const orClauses = [];
+    if (fuzzyPattern) {
+      orClauses.push({ normalizedRestaurant: { $regex: fuzzyPattern } });
+      orClauses.push({ normalizedItem: { $regex: fuzzyPattern } });
+    }
+    orClauses.push({ platform: { $regex: rawQuery, $options: 'i' } });
+
+    const foodPrices = await FoodPrice.find({ $or: orClauses }).select('restaurant item platform').limit(20);
+
+    // Normalize suggestions and filter by normalized inclusion
+    const allValues = foodPrices.flatMap((fp) => [fp.item, fp.restaurant, fp.platform]);
+    const uniqueValues = [...new Set(allValues)];
+
+    const suggestions = uniqueValues
+      .filter((value) => normalizeSearch(value).includes(normalizedQuery))
       .slice(0, 6);
 
     res.json(suggestions);

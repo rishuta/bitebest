@@ -97,6 +97,7 @@ const getOfferLabel = (foodPrice: FoodPrice) => {
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<FoodPrice[]>([]);
+  const [groupedResults, setGroupedResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState('');
@@ -142,7 +143,9 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setResults(data);
+      // API now returns { grouped, entries } — keep backward compatibility by using `entries`
+      setResults(Array.isArray(data) ? data : data.entries || []);
+      setGroupedResults(!Array.isArray(data) && data.grouped ? data.grouped : []);
       setExpandedResultId('');
       setSelectedPlatform('All');
       setVisibleRows(initialVisibleRows);
@@ -455,6 +458,25 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+              {/* Grouped restaurant-level summary (cheapest item + platform) */}
+              {groupedResults.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  {groupedResults.map((g) => (
+                    <article key={`${g.restaurant}::${g.item}`} className="rounded-lg border border-[#DDD2BD] bg-[#FFFDF7] p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-[#1F2A1D]">{g.restaurant}</p>
+                          <p className="mt-0.5 text-lg font-semibold text-[#556B2F]">{g.item}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-[#6B6B5F]">{g.badge}</p>
+                          <p className="mt-1 text-xs text-[#6B6B5F]">{g.comparisonLine}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-center">
