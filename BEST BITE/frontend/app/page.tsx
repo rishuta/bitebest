@@ -97,7 +97,7 @@ const getOfferLabel = (foodPrice: FoodPrice) => {
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<FoodPrice[]>([]);
-  const [groupedResults, setGroupedResults] = useState<any[]>([]);
+  const [groupedResults, setGroupedResults] = useState<FoodPrice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState('');
@@ -143,10 +143,10 @@ export default function Home() {
       }
 
       const data = await response.json();
-      // API returns { grouped, entries }
-      const grouped = !Array.isArray(data) && data.grouped ? data.grouped : (Array.isArray(data) ? data : []);
-      setResults(grouped);
-      setGroupedResults(grouped);
+      // API returns { grouped, entries } - use entries for individual records to display
+      const flatResults = !Array.isArray(data) && data.entries ? data.entries : (Array.isArray(data) ? data : []);
+      setResults(flatResults || []);
+      setGroupedResults(flatResults || []);
       setExpandedResultId('');
       setSelectedPlatform('All');
       setVisibleRows(initialVisibleRows);
@@ -209,8 +209,8 @@ export default function Home() {
       platformFilters.reduce<Record<string, number>>((counts, platform) => {
         counts[platform] =
           platform === 'All'
-            ? results.length
-            : results.filter((result) => result.platform.toLowerCase() === platform.toLowerCase()).length;
+            ? (results || []).length
+            : (results || []).filter((result) => result?.platform?.toLowerCase() === platform.toLowerCase()).length;
         return counts;
       }, {}),
     [results]
@@ -218,20 +218,20 @@ export default function Home() {
 
   const filteredResults = useMemo(
     () =>
-      results
+      (results || [])
         .filter(
-          (result) => selectedPlatform === 'All' || result.platform.toLowerCase() === selectedPlatform.toLowerCase()
+          (result) => selectedPlatform === 'All' || result.platform?.toLowerCase() === selectedPlatform.toLowerCase()
         )
         .sort((firstResult, secondResult) => getFinalPrice(firstResult) - getFinalPrice(secondResult)),
     [results, selectedPlatform]
   );
 
   const restaurantQuery = searchQuery.trim().toLowerCase();
-  const restaurantMatchCount = filteredResults.filter((result) =>
-    result.restaurant.toLowerCase().includes(restaurantQuery)
+  const restaurantMatchCount = (filteredResults || []).filter((result) =>
+    result?.restaurant?.toLowerCase().includes(restaurantQuery)
   ).length;
-  const itemMatchCount = filteredResults.filter((result) =>
-    result.item.toLowerCase().includes(restaurantQuery)
+  const itemMatchCount = (filteredResults || []).filter((result) =>
+    result?.item?.toLowerCase().includes(restaurantQuery)
   ).length;
   const isRestaurantSearch =
     restaurantQuery.length > 0 && restaurantMatchCount >= itemMatchCount && restaurantMatchCount > 0;
@@ -239,7 +239,7 @@ export default function Home() {
   const restaurantResults = useMemo(
     () =>
       isRestaurantSearch
-        ? filteredResults.filter((result) => result.restaurant.toLowerCase().includes(restaurantQuery))
+        ? (filteredResults || []).filter((result) => result.restaurant?.toLowerCase().includes(restaurantQuery))
         : [],
     [filteredResults, isRestaurantSearch, restaurantQuery]
   );
@@ -247,8 +247,8 @@ export default function Home() {
   const restaurantItems = useMemo(() => {
     const groups = new Map<string, FoodPrice[]>();
 
-    restaurantResults.forEach((result) => {
-      const itemKey = result.item || 'Unknown item';
+    (restaurantResults || []).forEach((result) => {
+      const itemKey = result?.item || 'Unknown item';
       const group = groups.get(itemKey);
 
       if (group) {
@@ -266,38 +266,38 @@ export default function Home() {
       .sort(([leftItem], [rightItem]) => leftItem.localeCompare(rightItem));
   }, [restaurantResults]);
 
-  const cheapestRestaurantItem = restaurantItems.length
-    ? restaurantItems
+  const cheapestRestaurantItem = (restaurantItems || []).length
+    ? (restaurantItems || [])
         .map(([, itemGroup]) => itemGroup[0])
         .sort((a, b) => getFinalPrice(a) - getFinalPrice(b))[0]
     : undefined;
 
-  const restaurantItemCount = restaurantItems.length;
-  const restaurantName = restaurantResults[0]?.restaurant || '';
+  const restaurantItemCount = (restaurantItems || []).length;
+  const restaurantName = restaurantResults?.[0]?.restaurant || '';
   const restaurantHighestCheapestPrice = Math.max(
     0,
-    ...restaurantItems.map(([, itemGroup]) => getFinalPrice(itemGroup[0]))
+    ...(restaurantItems || []).map(([, itemGroup]) => getFinalPrice(itemGroup[0]))
   );
   const restaurantSavingsVsHighest = cheapestRestaurantItem
     ? restaurantHighestCheapestPrice - getFinalPrice(cheapestRestaurantItem)
     : 0;
 
-  const visibleResults = filteredResults.slice(0, visibleRows);
-  const bestDeal = filteredResults[0];
+  const visibleResults = (filteredResults || []).slice(0, visibleRows);
+  const bestDeal = (filteredResults || [])[0];
   const bestDealPrice = bestDeal ? getFinalPrice(bestDeal) : 0;
-  const highestPrice = filteredResults.reduce(
+  const highestPrice = (filteredResults || []).reduce(
     (highestTotal, result) => Math.max(highestTotal, getFinalPrice(result)),
     bestDealPrice
   );
   const savingsVsHighest = Math.max(highestPrice - bestDealPrice, 0);
-  const comparedRestaurants = new Set(results.map((result) => result.restaurant));
+  const comparedRestaurants = new Set((results || []).map((result) => result?.restaurant));
   const hasComparison = filteredResults.length > 1;
 
   const visibleResultsByItem = useMemo(() => {
     const groups = new Map<string, FoodPrice[]>();
 
-    visibleResults.forEach((result) => {
-      const itemKey = result.item || 'Unknown item';
+    (visibleResults || []).forEach((result) => {
+      const itemKey = result?.item || 'Unknown item';
       const group = groups.get(itemKey);
 
       if (group) {
