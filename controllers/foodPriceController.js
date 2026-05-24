@@ -72,20 +72,7 @@ const searchFoodPrices = async (req, res, next) => {
       if (!groups[key]) groups[key] = { restaurant: obj.restaurant, item: obj.item, entries: [] };
       groups[key].entries.push({ platform: obj.platform, finalPrice: priceDetails.finalPrice, foodPrice: obj.foodPrice });
     });
-
-      g.entries.sort((a, b) => a.finalPrice - b.finalPrice);
-      const cheapest = g.entries[0];
-      return {
-        restaurant: g.restaurant,
-        item: g.item,
-        cheapestPlatform: cheapest.platform,
-        cheapestPrice: cheapest.finalPrice,
-        platforms: g.entries.map((e) => ({ platform: e.platform, price: e.finalPrice })),
-        badge: `Cheapest: ${cheapest.platform} ₹${cheapest.finalPrice}`,
-        comparisonLine: g.entries.map((e) => `${e.platform} ₹${e.price}`).join(' | '),
-      };
-    });
-
+    
     const results = Object.values(groups).map((g) => {
       g.entries.sort((a, b) => a.finalPrice - b.finalPrice);
       const cheapest = g.entries[0];
