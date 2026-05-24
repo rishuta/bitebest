@@ -94,6 +94,23 @@ const getOfferLabel = (foodPrice: FoodPrice) => {
   return foodPrice.offerType;
 };
 
+// Deduplication: keep only cheapest per restaurant + item + platform
+const deduplicateResults = (results: FoodPrice[]): FoodPrice[] => {
+  const dedupMap = new Map<string, FoodPrice>();
+
+  (results || []).forEach((result) => {
+    const key = `${result?.restaurant || ''}||${result?.item || ''}||${result?.platform || ''}`;
+    const currentEntry = dedupMap.get(key);
+    const currentPrice = getFinalPrice(result);
+    
+    if (!currentEntry || currentPrice < getFinalPrice(currentEntry)) {
+      dedupMap.set(key, result);
+    }
+  });
+
+  return Array.from(dedupMap.values());
+};
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<FoodPrice[]>([]);
@@ -145,8 +162,10 @@ export default function Home() {
       const data = await response.json();
       // API returns { grouped, entries } - use entries for individual records to display
       const flatResults = !Array.isArray(data) && data.entries ? data.entries : (Array.isArray(data) ? data : []);
-      setResults(flatResults || []);
-      setGroupedResults(flatResults || []);
+      // Deduplicate: keep only cheapest per restaurant + item + platform
+      const dedupedResults = deduplicateResults(flatResults || []);
+      setResults(dedupedResults);
+      setGroupedResults(dedupedResults);
       setExpandedResultId('');
       setSelectedPlatform('All');
       setVisibleRows(initialVisibleRows);
@@ -582,25 +601,38 @@ export default function Home() {
                         {visibleResultsByItem.map(([item, itemGroup]) => {
                           const cheapestOption = itemGroup[0];
                           const cheapestPrice = getFinalPrice(cheapestOption);
+                          const highestPrice = Math.max(...itemGroup.map(r => getFinalPrice(r)));
+                          const maxSavings = highestPrice - cheapestPrice;
                           
                           return (
-                            <section key={item} className="rounded-[24px] border border-[#DDD2BD] bg-[#FFFDF7] p-6 shadow-sm">
+                            <section key={item} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] p-4 shadow-sm">
                               {/* Header: Restaurant • Item */}
-                              <div className="border-b border-[#DDD2BD] pb-4">
-                                <h3 className="text-lg font-semibold text-[#243119]">
+                              <div className="border-b border-[#DDD2BD] pb-3 mb-3">
+                                <h3 className="text-base font-semibold text-[#243119]">
                                   {itemGroup[0].restaurant} <span className="text-[#6B6B5F]">•</span> {item}
                                 </h3>
                               </div>
 
-                              {/* Best Price Today Section */}
-                              <div className="mt-5 rounded-[20px] border-2 border-[#A8B879] bg-[#EEF3DF] p-5">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#556B2F]">Best Price Today</p>
-                                <p className="mt-3 text-4xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
-                                <p className="mt-2 text-sm font-semibold text-[#556B2F]">{cheapestOption.platform}</p>
+                              {/* Compact Best Price Section */}
+                              <div className="rounded-[16px] border-2 border-[#A8B879] bg-[#EEF3DF] px-4 py-3 mb-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-[#556B2F]">Best Deal Today</p>
+                                    <p className="mt-1 text-2xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs font-semibold text-[#556B2F]">{cheapestOption.platform}</p>
+                                    {maxSavings > 0 && (
+                                      <p className="mt-1 text-sm font-semibold text-[#243119]">
+                                        Save {formatCurrency(maxSavings)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
 
-                              {/* Platform Comparison Rows */}
-                              <div className="mt-5 space-y-2">
+                              {/* Compact Table-like Platform Rows */}
+                              <div className="space-y-1 text-sm">
                                 {itemGroup.map((result) => {
                                   const priceDiff = getFinalPrice(result) - cheapestPrice;
                                   const isCheapest = priceDiff === 0;
@@ -608,43 +640,48 @@ export default function Home() {
                                   return (
                                     <div
                                       key={result._id}
-                                      className={`rounded-[16px] border px-4 py-3 transition ${
+                                      className={`rounded-[12px] border px-3 py-2 flex items-center gap-3 transition ${
                                         isCheapest
                                           ? 'border-[#A8B879] bg-[#EEF3DF] shadow-sm'
                                           : 'border-[#DDD2BD] bg-[#FFFDF7]'
                                       }`}
                                     >
-                                      <div className="flex items-center justify-between gap-4">
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-[#243119]">{result.platform}</p>
-                                          {isCheapest && (
-                                            <span className="mt-1 inline-block rounded-full bg-[#556B2F] px-2.5 py-0.5 text-[0.65rem] font-semibold text-[#F7F3EA]">
-                                              Best Deal
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="text-right">
-                                          <p className="text-base font-bold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
-                                          {!isCheapest && (
-                                            <p className="mt-0.5 text-xs font-semibold text-[#E74C3C]">
-                                              +{formatCurrency(priceDiff)}
-                                            </p>
-                                          )}
-                                        </div>
+                                      {/* Platform Name */}
+                                      <div className="min-w-[90px]">
+                                        <p className="font-semibold text-[#243119]">{result.platform}</p>
+                                        {isCheapest && (
+                                          <span className="inline-block rounded-full bg-[#556B2F] px-2 py-0.5 text-[0.6rem] font-semibold text-[#F7F3EA] mt-0.5">
+                                            Best
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Price */}
+                                      <div className="min-w-[70px]">
+                                        <p className="font-bold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
+                                        {!isCheapest && (
+                                          <p className="text-[0.7rem] text-[#E74C3C] font-semibold">+{formatCurrency(priceDiff)}</p>
+                                        )}
+                                      </div>
+
+                                      {/* Rating */}
+                                      <div className="min-w-[50px]">
+                                        <p className="text-[#556B2F] font-medium">{formatRating(result.rating)}</p>
+                                      </div>
+
+                                      {/* ETA */}
+                                      <div className="min-w-[50px]">
+                                        <p className="text-[#6B6B5F] font-medium">{result.eta || '—'}</p>
+                                      </div>
+
+                                      {/* Offer */}
+                                      <div className="flex-1 text-right">
+                                        <p className="text-[0.75rem] font-semibold text-[#556B2F]">{getOfferLabel(result)}</p>
                                       </div>
                                     </div>
                                   );
                                 })}
                               </div>
-
-                              {/* Savings Statement */}
-                              {itemGroup.length > 1 && (
-                                <div className="mt-5 rounded-[16px] bg-[#F7F3EA] p-4 text-center">
-                                  <p className="text-sm font-semibold text-[#243119]">
-                                    You save {formatCurrency(Math.max(...itemGroup.map(r => getFinalPrice(r))) - cheapestPrice)} by choosing {cheapestOption.platform}
-                                  </p>
-                                </div>
-                              )}
                             </section>
                           );
                         })}
