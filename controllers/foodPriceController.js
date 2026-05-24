@@ -83,7 +83,7 @@ const searchFoodPrices = async (req, res, next) => {
         cheapestPrice: cheapest.finalPrice,
         platforms: g.entries.map((e) => ({ platform: e.platform, price: e.finalPrice })),
         badge: `Cheapest: ${cheapest.platform} ₹${cheapest.finalPrice}`,
-        comparisonLine: g.entries.map((e) => `${e.platform} ₹${e.price}`).join(' | '),
+        comparisonLine: g.entries.map((e) => `${e.platform} ₹${e.finalPrice}`).join(' | '),
       };
     });
 

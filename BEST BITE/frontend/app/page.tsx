@@ -143,9 +143,10 @@ export default function Home() {
       }
 
       const data = await response.json();
-      // API now returns { grouped, entries } — keep backward compatibility by using `entries`
-      setResults(Array.isArray(data) ? data : data.entries || []);
-      setGroupedResults(!Array.isArray(data) && data.grouped ? data.grouped : []);
+      // API returns { grouped, entries }
+      const grouped = !Array.isArray(data) && data.grouped ? data.grouped : (Array.isArray(data) ? data : []);
+      setResults(grouped);
+      setGroupedResults(grouped);
       setExpandedResultId('');
       setSelectedPlatform('All');
       setVisibleRows(initialVisibleRows);
