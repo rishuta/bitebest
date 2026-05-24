@@ -654,31 +654,24 @@ export default function Home() {
                                 </p>
                               </div>
 
-                              <div className="rounded-[18px] border border-[#A8B879] bg-[#EEF3DF] px-4 py-4 mb-4">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                                  <div>
-                                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
-                                      Cheapest final price
-                                    </p>
-                                    <p className="mt-3 text-3xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-xs uppercase tracking-[0.18em] text-[#556B2F]">Platform</p>
-                                    <p className="mt-1 text-sm font-semibold text-[#243119]">{cheapestOption.platform}</p>
-                                  </div>
-                                  <div className="rounded-full bg-[#556B2F] px-3 py-2 text-sm font-semibold text-[#F7F3EA]">
-                                    Save {formatCurrency(maxSavings)} vs highest
-                                  </div>
+                              <div className="rounded-[22px] bg-[#EEF3DF] px-5 py-5 mb-4 shadow-sm">
+                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#556B2F]">
+                                  🏆 Cheapest Today
+                                </p>
+                                <p className="mt-3 text-4xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
+                                <p className="mt-2 text-sm font-semibold text-[#243119]">{cheapestOption.platform}</p>
+                                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#556B2F] px-3 py-2 text-sm font-semibold text-[#F7F3EA]">
+                                  Save {formatCurrency(maxSavings)}
                                 </div>
                               </div>
 
-                              <div className="overflow-hidden rounded-[18px] border border-[#DDD2BD] bg-[#FFFDF7]">
-                                <div className="hidden grid-cols-[1.8fr_70px_70px_70px_84px_80px] gap-3 border-b border-[#DDD2BD] px-3 py-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F] sm:grid">
+                              <div className="overflow-hidden rounded-[18px] bg-[#FFFDF7] shadow-sm">
+                                <div className="hidden grid-cols-[1.8fr_70px_70px_70px_84px_90px] gap-3 border-b border-[#E5E1D6] px-3 py-3 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F] sm:grid">
                                   <span>Platform</span>
                                   <span>Food</span>
                                   <span>Delivery</span>
-                                  <span>Packaging</span>
-                                  <span>Offer</span>
+                                  <span>Pack</span>
+                                  <span>Discount</span>
                                   <span className="text-right">Final</span>
                                 </div>
                                 <div className="space-y-3 p-3">
@@ -686,18 +679,36 @@ export default function Home() {
                                     const cheapestRow = getFinalPrice(result) === cheapestPrice;
 
                                     return (
-                                      <div key={result._id} className="space-y-3 rounded-[16px] border border-[#DDD2BD] bg-[#FFFDF7] p-3 shadow-sm transition sm:p-4">
-                                        <div className={`grid gap-3 sm:grid-cols-[1.8fr_70px_70px_70px_84px_80px] ${cheapestRow ? 'bg-[#F1F6E8]' : ''}`}>
+                                      <div key={result._id} className={`space-y-3 rounded-[16px] bg-[#FFFDF7] p-3 transition sm:p-4 ${cheapestRow ? 'bg-[#F2F8E9]' : ''}`}>
+                                        <div className="grid gap-3 sm:grid-cols-[1.8fr_70px_70px_70px_84px_90px] items-center">
                                           <div className="flex items-center gap-3">
-                                            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#F5F1E8] text-lg">
-                                              {getPlatformIcon(result.platform)}
+                                            <span
+                                              className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold text-[#243119] shadow-sm"
+                                              style={{
+                                                backgroundColor:
+                                                  result.platform === 'Swiggy'
+                                                    ? '#FFF3E0'
+                                                    : result.platform === 'Zomato'
+                                                    ? '#FDE7E9'
+                                                    : result.platform === 'Magicpin'
+                                                    ? '#F3E5F5'
+                                                    : '#EEF1EB',
+                                              }}
+                                            >
+                                              <span>
+                                                {result.platform === 'Swiggy'
+                                                  ? '🟠'
+                                                  : result.platform === 'Zomato'
+                                                  ? '🔴'
+                                                  : result.platform === 'Magicpin'
+                                                  ? '🟣'
+                                                  : '⭐'}
+                                              </span>
+                                              {result.platform}
                                             </span>
-                                            <div>
-                                              <p className="font-semibold text-[#243119]">{result.platform}</p>
-                                              <p className="mt-1 text-[0.8rem] text-[#6B6B5F]">
-                                                {formatRating(result.rating)} • {result.eta || '—'}
-                                              </p>
-                                            </div>
+                                            <p className="text-[0.78rem] text-[#6B6B5F]">
+                                              {formatRating(result.rating)} • {result.eta || '—'}
+                                            </p>
                                           </div>
 
                                           <div className="font-semibold text-[#243119]">{formatCurrency(result.foodPrice)}</div>
@@ -706,16 +717,16 @@ export default function Home() {
                                           <div className={`font-semibold ${result.discountApplied && result.discountApplied > 0 ? 'text-[#2E7D32]' : 'text-[#6B6B5F]'}`}>
                                             {result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}
                                           </div>
-                                          <div className="text-right font-bold text-[#243119]">{formatCurrency(getFinalPrice(result))}</div>
+                                          <div className={`text-right text-lg font-bold ${cheapestRow ? 'text-[#243119]' : 'text-[#6B6B5F]'}`}>{formatCurrency(getFinalPrice(result))}</div>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#DDD2BD] pt-3 text-sm">
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 text-sm">
                                           <button
                                             type="button"
                                             onClick={() => toggleBreakdown(result._id)}
                                             className="text-[#556B2F] font-semibold underline decoration-[#556B2F]/40"
                                           >
-                                            {expandedResultId === result._id ? 'Hide Breakdown' : 'View Breakdown'}
+                                            {expandedResultId === result._id ? 'Hide Breakdown' : 'Price Breakdown →'}
                                           </button>
                                           {cheapestRow ? (
                                             <span className="rounded-full bg-[#2E7D32]/10 px-3 py-1 text-xs font-semibold text-[#2E7D32]">
@@ -731,10 +742,13 @@ export default function Home() {
                                         {expandedResultId === result._id && (
                                           <div className="rounded-[16px] bg-[#F5F7ED] p-4 text-sm text-[#243119]">
                                             <div className="grid gap-2 sm:grid-cols-2">
-                                              <div className="flex justify-between"><span>Food Price</span><span>{formatCurrency(result.foodPrice)}</span></div>
+                                              <div className="flex justify-between"><span>Base Price</span><span>{formatCurrency(result.foodPrice)}</span></div>
                                               <div className="flex justify-between"><span>Delivery</span><span>{formatCurrency(result.deliveryFee || 0)}</span></div>
                                               <div className="flex justify-between"><span>Packaging</span><span>{formatCurrency(result.packagingFee || 0)}</span></div>
-                                              <div className="flex justify-between"><span>Offer</span><span>{result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}</span></div>
+                                              <div className="flex justify-between"><span>Discount</span><span className={result.discountApplied && result.discountApplied > 0 ? 'text-[#2E7D32]' : 'text-[#6B6B5F]'}>{result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}</span></div>
+                                            </div>
+                                            <div className="mt-4 rounded-[14px] bg-[#EEF3DF] p-3 text-sm text-[#243119]">
+                                              {formatCurrency(result.foodPrice)} + {formatCurrency(result.deliveryFee || 0)} + {formatCurrency(result.packagingFee || 0)} − {formatCurrency(result.discountApplied || 0)} = {formatCurrency(getFinalPrice(result))}
                                             </div>
                                             <div className="mt-3 flex justify-between border-t border-[#DDE7D7] pt-3 font-semibold">
                                               <span>Final</span>
