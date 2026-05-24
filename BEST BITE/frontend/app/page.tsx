@@ -94,6 +94,19 @@ const getOfferLabel = (foodPrice: FoodPrice) => {
   return foodPrice.offerType;
 };
 
+const platformIcons: Record<string, string> = {
+  Swiggy: '🍽️',
+  Zomato: '🟥',
+  Magicpin: '✨',
+  EatSure: '✅',
+  default: '⭐',
+};
+
+const getPlatformIcon = (platform?: string) => {
+  const key = platform?.trim() || '';
+  return platformIcons[key] || platformIcons.default;
+};
+
 // Deduplication: keep only cheapest per restaurant + item + platform
 const deduplicateResults = (results: FoodPrice[]): FoodPrice[] => {
   const dedupMap = new Map<string, FoodPrice>();
@@ -223,6 +236,10 @@ export default function Home() {
     window.location.href = '/';
   };
 
+  const toggleBreakdown = (resultId: string) => {
+    setExpandedResultId((current) => (current === resultId ? '' : resultId));
+  };
+
   const platformCounts = useMemo(
     () =>
       platformFilters.reduce<Record<string, number>>((counts, platform) => {
@@ -350,7 +367,9 @@ export default function Home() {
           <nav className="flex justify-end gap-6 text-sm font-medium text-[#1F2A1D]">
             {[
               ['Home', '#home'],
+              ['Why BiteBest', '#why'],
               ['How It Works', '#workflow'],
+              ['Future', '#future'],
               ['About', '#about'],
             ].map(([link, href]) => (
               <a key={link} href={href} className="transition hover:text-[#556B2F]">
@@ -393,7 +412,26 @@ export default function Home() {
                 Compare delivery fees, packaging fees, offers and final prices across top platforms in one premium experience.
               </p>
 
-              <div className="mt-10 space-y-5">
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[24px] bg-[#FFFDF7] p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
+                    🏆 Cheapest Platform
+                  </p>
+                  <p className="mt-3 text-xl font-semibold text-[#243119]">
+                    Find the lowest final price across delivery apps.
+                  </p>
+                </div>
+                <div className="rounded-[24px] bg-[#FFFDF7] p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
+                    ✅ Transparent pricing
+                  </p>
+                  <p className="mt-3 text-xl font-semibold text-[#243119]">
+                    Delivery + packaging fees shown clearly so you know the real total.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 space-y-5">
                 <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <label htmlFor="food-search" className="sr-only">
                     Search restaurant or food item
@@ -417,11 +455,11 @@ export default function Home() {
                     className="inline-flex items-center justify-center gap-2 rounded-[24px] bg-[#556B2F] px-5 py-4 text-sm font-semibold text-[#F7F3EA] transition hover:bg-[#4a5f24] sm:w-auto"
                   >
                     <Search size={16} />
-                    <span>Search</span>
+                    <span>Compare Prices Instantly</span>
                   </button>
                 </form>
                 <p className="text-sm text-[#6B6B5F] sm:max-w-xl">
-                  Examples: Chicken Biryani • Burger • Meghana Foods • Pizza
+                  Save ₹20–₹80 per order · Compare food, delivery, packaging, and offer totals instantly.
                 </p>
 
                 {suggestions.length > 0 && (
@@ -611,73 +649,103 @@ export default function Home() {
                                 <h3 className="text-base font-semibold text-[#243119]">
                                   {cheapestOption.restaurant} <span className="text-[#6B6B5F]">•</span> {item}
                                 </h3>
+                                <p className="mt-2 text-sm text-[#6B6B5F]">
+                                  Compare platform totals for this item with delivery, packaging, and offers included.
+                                </p>
                               </div>
 
-                              {/* Best Deal Today */}
-                              <div className="rounded-[16px] border-2 border-[#A8B879] bg-[#EEF3DF] px-4 py-3 mb-3">
-                                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-[#556B2F]">BEST DEAL TODAY</p>
-                                <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                              <div className="rounded-[18px] border border-[#A8B879] bg-[#EEF3DF] px-4 py-4 mb-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                   <div>
-                                    <p className="text-3xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
-                                    <p className="mt-1 text-sm font-semibold text-[#243119]">
-                                      Save {formatCurrency(maxSavings)} vs highest
+                                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[#556B2F]">
+                                      Cheapest final price
                                     </p>
+                                    <p className="mt-3 text-3xl font-bold text-[#243119]">{formatCurrency(cheapestPrice)}</p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-[#556B2F]">Platform</p>
+                                    <p className="text-xs uppercase tracking-[0.18em] text-[#556B2F]">Platform</p>
                                     <p className="mt-1 text-sm font-semibold text-[#243119]">{cheapestOption.platform}</p>
+                                  </div>
+                                  <div className="rounded-full bg-[#556B2F] px-3 py-2 text-sm font-semibold text-[#F7F3EA]">
+                                    Save {formatCurrency(maxSavings)} vs highest
                                   </div>
                                 </div>
                               </div>
 
-                              {/* Header row */}
-                              <div className="hidden grid-cols-[1.3fr_70px_70px_1.3fr_70px] gap-3 pb-2 text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-[#556B2F] sm:grid">
-                                <span>Platform</span>
-                                <span>Price</span>
-                                <span>ETA</span>
-                                <span>Offer</span>
-                                <span className="text-right">Rating</span>
-                              </div>
+                              <div className="overflow-hidden rounded-[18px] border border-[#DDD2BD] bg-[#FFFDF7]">
+                                <div className="hidden grid-cols-[1.8fr_70px_70px_70px_84px_80px] gap-3 border-b border-[#DDD2BD] px-3 py-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F] sm:grid">
+                                  <span>Platform</span>
+                                  <span>Food</span>
+                                  <span>Delivery</span>
+                                  <span>Packaging</span>
+                                  <span>Offer</span>
+                                  <span className="text-right">Final</span>
+                                </div>
+                                <div className="space-y-3 p-3">
+                                  {itemGroup.map((result) => {
+                                    const cheapestRow = getFinalPrice(result) === cheapestPrice;
 
-                              {/* Platform list */}
-                              <div className="space-y-1 text-sm">
-                                {itemGroup.map((result) => {
-                                  const priceDiff = getFinalPrice(result) - cheapestPrice;
-                                  const isCheapest = priceDiff === 0;
+                                    return (
+                                      <div key={result._id} className="space-y-3 rounded-[16px] border border-[#DDD2BD] bg-[#FFFDF7] p-3 shadow-sm transition sm:p-4">
+                                        <div className={`grid gap-3 sm:grid-cols-[1.8fr_70px_70px_70px_84px_80px] ${cheapestRow ? 'bg-[#F1F6E8]' : ''}`}>
+                                          <div className="flex items-center gap-3">
+                                            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#F5F1E8] text-lg">
+                                              {getPlatformIcon(result.platform)}
+                                            </span>
+                                            <div>
+                                              <p className="font-semibold text-[#243119]">{result.platform}</p>
+                                              <p className="mt-1 text-[0.8rem] text-[#6B6B5F]">
+                                                {formatRating(result.rating)} • {result.eta || '—'}
+                                              </p>
+                                            </div>
+                                          </div>
 
-                                  return (
-                                    <div
-                                      key={result._id}
-                                      className={`grid grid-cols-[1.3fr_70px_70px_1.3fr_70px] items-center gap-3 rounded-[12px] border px-3 py-2 text-sm transition ${
-                                        isCheapest
-                                          ? 'border-[#A8B879] bg-[#EEF3DF] shadow-sm'
-                                          : 'border-[#DDD2BD] bg-[#FFFDF7]'
-                                      }`}
-                                    >
-                                      <div>
-                                        <p className="font-semibold text-[#243119]">{result.platform}</p>
-                                        {isCheapest && (
-                                          <span className="inline-block rounded-full bg-[#556B2F] px-2 py-0.5 text-[0.65rem] font-semibold text-[#F7F3EA] mt-1">
-                                            Best
-                                          </span>
+                                          <div className="font-semibold text-[#243119]">{formatCurrency(result.foodPrice)}</div>
+                                          <div className="font-semibold text-[#243119]">{formatCurrency(result.deliveryFee || 0)}</div>
+                                          <div className="font-semibold text-[#243119]">{formatCurrency(result.packagingFee || 0)}</div>
+                                          <div className={`font-semibold ${result.discountApplied && result.discountApplied > 0 ? 'text-[#2E7D32]' : 'text-[#6B6B5F]'}`}>
+                                            {result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}
+                                          </div>
+                                          <div className="text-right font-bold text-[#243119]">{formatCurrency(getFinalPrice(result))}</div>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#DDD2BD] pt-3 text-sm">
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleBreakdown(result._id)}
+                                            className="text-[#556B2F] font-semibold underline decoration-[#556B2F]/40"
+                                          >
+                                            {expandedResultId === result._id ? 'Hide Breakdown' : 'View Breakdown'}
+                                          </button>
+                                          {cheapestRow ? (
+                                            <span className="rounded-full bg-[#2E7D32]/10 px-3 py-1 text-xs font-semibold text-[#2E7D32]">
+                                              Cheapest platform
+                                            </span>
+                                          ) : (
+                                            <span className="text-[#6B6B5F] text-xs">
+                                              {formatCurrency(getFinalPrice(result) - cheapestPrice)} more than cheapest
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {expandedResultId === result._id && (
+                                          <div className="rounded-[16px] bg-[#F5F7ED] p-4 text-sm text-[#243119]">
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                              <div className="flex justify-between"><span>Food Price</span><span>{formatCurrency(result.foodPrice)}</span></div>
+                                              <div className="flex justify-between"><span>Delivery</span><span>{formatCurrency(result.deliveryFee || 0)}</span></div>
+                                              <div className="flex justify-between"><span>Packaging</span><span>{formatCurrency(result.packagingFee || 0)}</span></div>
+                                              <div className="flex justify-between"><span>Offer</span><span>{result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}</span></div>
+                                            </div>
+                                            <div className="mt-3 flex justify-between border-t border-[#DDE7D7] pt-3 font-semibold">
+                                              <span>Final</span>
+                                              <span>{formatCurrency(getFinalPrice(result))}</span>
+                                            </div>
+                                          </div>
                                         )}
                                       </div>
-
-                                      <div>
-                                        <p className="font-semibold text-[#243119]">{formatCurrency(getFinalPrice(result))}</p>
-                                        {!isCheapest && (
-                                          <p className="text-[0.65rem] text-[#E74C3C] font-semibold">+{formatCurrency(priceDiff)}</p>
-                                        )}
-                                      </div>
-
-                                      <div className="text-[#6B6B5F]">{result.eta || '—'}</div>
-
-                                      <div className="text-[#556B2F] font-medium">{getOfferLabel(result)}</div>
-
-                                      <div className="text-right text-[#556B2F] font-medium">{formatRating(result.rating)}</div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </section>
                           );
@@ -703,6 +771,44 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      <section id="why" className="scroll-mt-24 pb-14">
+        <div className="mx-auto max-w-[1200px] px-6">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-3xl">
+              <h2 className="text-3xl font-semibold text-[#243119] sm:text-4xl">Why BiteBest?</h2>
+              <p className="mt-3 text-base leading-7 text-[#6B6B5F]">
+                Designed to make every meal decision faster, smarter, and more transparent.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                title: 'Save ₹20–₹80 every order',
+                description: 'Instantly compare full delivery totals across top apps.',
+              },
+              {
+                title: 'Avoid hidden packaging fees',
+                description: 'See the real final price, not just menu pricing.',
+              },
+              {
+                title: 'Compare delivery costs instantly',
+                description: 'One dashboard for food, delivery, packaging, and offers.',
+              },
+              {
+                title: 'Find the cheapest platform quickly',
+                description: 'Best deals highlighted with a premium green accent.',
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] p-6 shadow-sm">
+                <p className="text-lg font-semibold text-[#243119]">{item.title}</p>
+                <p className="mt-3 text-sm leading-7 text-[#6B6B5F]">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section id="workflow" className="scroll-mt-24 pb-[120px]">
         <div className="mx-auto max-w-[1200px] px-6">
@@ -772,6 +878,48 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <section id="future" className="scroll-mt-24 pb-14">
+        <div className="mx-auto max-w-[1200px] px-6">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-3xl">
+              <h2 className="text-3xl font-semibold text-[#243119] sm:text-4xl">Future Features</h2>
+              <p className="mt-3 text-base leading-7 text-[#6B6B5F]">
+                Planned enhancements for a richer BiteBest experience.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              'AI Meal Recommendations',
+              'Price Trend Tracking',
+              'Savings Analytics',
+              'Nearby Restaurant Suggestions',
+              'Browser Extension',
+              'Real-Time APIs',
+            ].map((feature) => (
+              <div key={feature} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] p-5 shadow-sm">
+                <p className="text-base font-semibold text-[#243119]">{feature}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-[#DDD2BD] bg-[#FFFDF7] py-8">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#243119]">BiteBest</p>
+            <p className="mt-2 text-sm text-[#6B6B5F]">Built with Next.js + MongoDB</p>
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm font-medium text-[#556B2F]">
+            <a href="#" className="transition hover:text-[#243119]">GitHub</a>
+            <a href="#" className="transition hover:text-[#243119]">Privacy Policy</a>
+            <a href="#" className="transition hover:text-[#243119]">Terms</a>
+            <a href="#" className="transition hover:text-[#243119]">LinkedIn</a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
