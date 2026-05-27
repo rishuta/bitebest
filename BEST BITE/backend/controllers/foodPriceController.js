@@ -51,10 +51,10 @@ const buildFuzzyPatternFromNormalized = (normalizedInput) => {
 // Alias map for common misspellings / alternate forms. Keys/values should be normalized.
 const ALIAS_MAP = {
   'shwarma': 'shawarma',
-  'shawarma': 'shawarma',
   "mc donalds": 'mcdonalds',
   'mcdonalds': 'mcdonalds',
   "mc donald's": 'mcdonalds',
+  'domino s': 'dominos',
   'dominos': 'dominos',
   'domino': 'dominos',
   'burgerking': 'burger king',
@@ -81,8 +81,9 @@ const getSearchAliases = (rawQuery) => {
       aliases.add(replaced);
     }
 
-    // Also include the mapped term on its own (helps when user searches the alias only)
-    aliases.add(mapped);
+    if (key && normalizedQuery === key) {
+      aliases.add(mapped);
+    }
   });
 
   return Array.from(aliases).filter(Boolean);

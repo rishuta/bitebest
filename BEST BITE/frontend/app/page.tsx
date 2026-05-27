@@ -71,6 +71,28 @@ const formatCurrency = (amount: number) => `\u20b9${amount}`;
 
 const formatRating = (rating?: number) => (typeof rating === 'number' ? `\u2b50${rating.toFixed(1)}` : 'New');
 
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const matchesSearchText = (value: string, query: string) => {
+  const normalizedValue = normalizeSearchText(value);
+  const normalizedQuery = normalizeSearchText(query);
+  const compactValue = normalizedValue.replace(/\s+/g, '');
+  const compactQuery = normalizedQuery.replace(/\s+/g, '');
+
+  return (
+    normalizedQuery.length > 0 &&
+    (normalizedValue.includes(normalizedQuery) ||
+      normalizedQuery.includes(normalizedValue) ||
+      compactValue.includes(compactQuery) ||
+      compactQuery.includes(compactValue))
+  );
+};
+
 const getFinalPrice = (foodPrice: FoodPrice) =>
   foodPrice.finalPrice ?? foodPrice.foodPrice + (foodPrice.deliveryFee || 0) + (foodPrice.packagingFee || 0);
 
@@ -127,13 +149,11 @@ const deduplicateResults = (results: FoodPrice[]): FoodPrice[] => {
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<FoodPrice[]>([]);
-  const [groupedResults, setGroupedResults] = useState<FoodPrice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState('');
   const [searchMessage, setSearchMessage] = useState('');
   const [expandedResultId, setExpandedResultId] = useState('');
-  const [expandedRestaurantItem, setExpandedRestaurantItem] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('All');
   const [visibleRows, setVisibleRows] = useState(initialVisibleRows);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -178,7 +198,6 @@ export default function Home() {
       // Deduplicate: keep only cheapest per restaurant + item + platform
       const dedupedResults = deduplicateResults(flatResults || []);
       setResults(dedupedResults);
-      setGroupedResults(dedupedResults);
       setExpandedResultId('');
       setSelectedPlatform('All');
       setVisibleRows(initialVisibleRows);
@@ -262,63 +281,69 @@ export default function Home() {
     [results, selectedPlatform]
   );
 
-  const restaurantQuery = searchQuery.trim().toLowerCase();
+  const restaurantQuery = searchQuery.trim();
   const restaurantMatchCount = (filteredResults || []).filter((result) =>
-    result?.restaurant?.toLowerCase().includes(restaurantQuery)
+    matchesSearchText(result?.restaurant || '', restaurantQuery)
   ).length;
   const itemMatchCount = (filteredResults || []).filter((result) =>
-    result?.item?.toLowerCase().includes(restaurantQuery)
+    matchesSearchText(result?.item || '', restaurantQuery)
   ).length;
   const isRestaurantSearch =
-    restaurantQuery.length > 0 && restaurantMatchCount >= itemMatchCount && restaurantMatchCount > 0;
+    normalizeSearchText(restaurantQuery).length > 0 && restaurantMatchCount >= itemMatchCount && restaurantMatchCount > 0;
 
-  const restaurantResults = useMemo(
-    () =>
-      isRestaurantSearch
-        ? (filteredResults || []).filter((result) => result.restaurant?.toLowerCase().includes(restaurantQuery))
-        : [],
-    [filteredResults, isRestaurantSearch, restaurantQuery]
-  );
-
-  const restaurantItems = useMemo(() => {
+  const restaurantResultGroups = useMemo(() => {
     const groups = new Map<string, FoodPrice[]>();
 
-    (restaurantResults || []).forEach((result) => {
-      const itemKey = result?.item || 'Unknown item';
-      const group = groups.get(itemKey);
+    if (!isRestaurantSearch) return [];
 
-      if (group) {
-        group.push(result);
-      } else {
-        groups.set(itemKey, [result]);
-      }
-    });
+    (filteredResults || [])
+      .filter((result) => matchesSearchText(result?.restaurant || '', restaurantQuery))
+      .forEach((result) => {
+        const restaurantKey = result?.restaurant || 'Unknown restaurant';
+        const group = groups.get(restaurantKey);
+
+        if (group) {
+          group.push(result);
+        } else {
+          groups.set(restaurantKey, [result]);
+        }
+      });
 
     return Array.from(groups.entries())
-      .map(([item, itemGroup]) => [
-        item,
-        itemGroup.sort((a, b) => getFinalPrice(a) - getFinalPrice(b)),
-      ] as [string, FoodPrice[]])
-      .sort(([leftItem], [rightItem]) => leftItem.localeCompare(rightItem));
-  }, [restaurantResults]);
+      .map(([restaurant, restaurantGroup]) => {
+        const itemGroups = new Map<string, FoodPrice[]>();
 
-  const cheapestRestaurantItem = (restaurantItems || []).length
-    ? (restaurantItems || [])
-        .map(([, itemGroup]) => itemGroup[0])
-        .sort((a, b) => getFinalPrice(a) - getFinalPrice(b))[0]
-    : undefined;
+        restaurantGroup.forEach((result) => {
+          const itemKey = result?.item || 'Unknown item';
+          const itemGroup = itemGroups.get(itemKey);
 
-  const restaurantItemCount = (restaurantItems || []).length;
-  const restaurantName = restaurantResults?.[0]?.restaurant || '';
-  const restaurantHighestCheapestPrice = Math.max(
-    0,
-    ...(restaurantItems || []).map(([, itemGroup]) => getFinalPrice(itemGroup[0]))
-  );
-  const restaurantSavingsVsHighest = cheapestRestaurantItem
-    ? restaurantHighestCheapestPrice - getFinalPrice(cheapestRestaurantItem)
-    : 0;
+          if (itemGroup) {
+            itemGroup.push(result);
+          } else {
+            itemGroups.set(itemKey, [result]);
+          }
+        });
 
-  const visibleResults = (filteredResults || []).slice(0, visibleRows);
+        const items = Array.from(itemGroups.entries())
+          .map(([item, itemGroup]) => ({
+            item,
+            cheapestOption: itemGroup.sort((a, b) => getFinalPrice(a) - getFinalPrice(b))[0],
+          }))
+          .sort((left, right) => left.item.localeCompare(right.item));
+        const cheapestItem = [...items].sort(
+          (left, right) => getFinalPrice(left.cheapestOption) - getFinalPrice(right.cheapestOption)
+        )[0];
+
+        return { restaurant, items, cheapestItem };
+      })
+      .sort((left, right) => {
+        const leftPrice = left.cheapestItem ? getFinalPrice(left.cheapestItem.cheapestOption) : Number.MAX_SAFE_INTEGER;
+        const rightPrice = right.cheapestItem ? getFinalPrice(right.cheapestItem.cheapestOption) : Number.MAX_SAFE_INTEGER;
+
+        return leftPrice - rightPrice;
+      });
+  }, [filteredResults, isRestaurantSearch, restaurantQuery]);
+
   const bestDeal = (filteredResults || [])[0];
   const bestDealPrice = bestDeal ? getFinalPrice(bestDeal) : 0;
   const highestPrice = (filteredResults || []).reduce(
@@ -327,13 +352,12 @@ export default function Home() {
   );
   const savingsVsHighest = Math.max(highestPrice - bestDealPrice, 0);
   const comparedRestaurants = new Set((results || []).map((result) => result?.restaurant));
-  const hasComparison = filteredResults.length > 1;
 
   const visibleResultsByItem = useMemo(() => {
     const groups = new Map<string, FoodPrice[]>();
 
-    (visibleResults || []).forEach((result) => {
-      const itemKey = result?.item || 'Unknown item';
+    (filteredResults || []).forEach((result) => {
+      const itemKey = `${result?.restaurant || 'Unknown restaurant'}||${result?.item || 'Unknown item'}`;
       const group = groups.get(itemKey);
 
       if (group) {
@@ -344,14 +368,23 @@ export default function Home() {
     });
 
     return Array.from(groups.entries())
-      .map(([item, itemGroup]) => [
-        item,
+      .map(([key, itemGroup]) => [
+        key,
         itemGroup.sort((a, b) => getFinalPrice(a) - getFinalPrice(b)),
       ] as [string, FoodPrice[]])
-      .sort(([leftItem], [rightItem]) => leftItem.localeCompare(rightItem));
-  }, [visibleResults]);
+      .sort(([, leftGroup], [, rightGroup]) => getFinalPrice(leftGroup[0]) - getFinalPrice(rightGroup[0]))
+      .slice(0, visibleRows);
+  }, [filteredResults, visibleRows]);
+
+  const totalFoodItemGroups = useMemo(
+    () => new Set((filteredResults || []).map((result) => `${result.restaurant}||${result.item}`)).size,
+    [filteredResults]
+  );
+  const restaurantName = restaurantResultGroups[0]?.restaurant || '';
+  const restaurantItemCount = restaurantResultGroups[0]?.items.length || 0;
+
   const comparisonTitle =
-    isRestaurantSearch && restaurantName
+    isRestaurantSearch && restaurantResultGroups.length > 0
       ? `${restaurantName} • ${restaurantItemCount} item${restaurantItemCount === 1 ? '' : 's'} available`
       : results.length > 0 && comparedRestaurants.size === 1
         ? `${results[0].item} • ${results[0].restaurant}`
@@ -617,33 +650,68 @@ export default function Home() {
                   ))}
                 </div>
 
-                <div className="rounded-[18px] border border-[#DDD2BD] bg-[#FFFDF7] p-3 shadow-[0_12px_28px_rgba(85,107,47,0.08)]">
+                {restaurantResultGroups.length > 0 && (
+                  <section className="space-y-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#556B2F]">Restaurant Results</p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {restaurantResultGroups.map((restaurantGroup) => {
+                        const cheapestItem = restaurantGroup.cheapestItem;
+                        const cheapestPrice = cheapestItem ? getFinalPrice(cheapestItem.cheapestOption) : 0;
+
+                        return (
+                          <article
+                            key={restaurantGroup.restaurant}
+                            className="rounded-[18px] border border-[#DDD2BD] bg-[#FFFDF7] p-5 shadow-[0_12px_28px_rgba(85,107,47,0.08)]"
+                          >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <h3 className="text-xl font-semibold text-[#243119]">{restaurantGroup.restaurant}</h3>
+                                <p className="mt-2 text-sm leading-6 text-[#6B6B5F]">
+                                  Available items: {restaurantGroup.items.map((restaurantItem) => restaurantItem.item).join(', ')}
+                                </p>
+                                <p className="mt-3 text-sm font-semibold text-[#243119]">
+                                  Cheapest from {formatCurrency(cheapestPrice)}
+                                </p>
+                              </div>
+                              <a
+                                href="#food-item-results"
+                                className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#556B2F] px-4 py-2.5 text-sm font-semibold text-[#F7F3EA] transition hover:bg-[#4a5f24]"
+                              >
+                                View Menu Deals
+                              </a>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                <div id="food-item-results" className="rounded-[18px] border border-[#DDD2BD] bg-[#FFFDF7] p-3 shadow-[0_12px_28px_rgba(85,107,47,0.08)]">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DDD2BD] bg-[#FFFDF7] px-4 py-3">
-                    <p className="text-sm font-semibold text-[#243119]">
-                      Showing {filteredResults.length} option{filteredResults.length === 1 ? '' : 's'} compared
-                    </p>
-                    {visibleRows < filteredResults.length && (
-                      <p className="text-xs font-medium text-[#6B6B5F]">First {visibleResults.length} visible</p>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#556B2F]">Food Item Results</p>
+                      <p className="mt-1 text-sm font-semibold text-[#243119]">
+                        Showing {filteredResults.length} option{filteredResults.length === 1 ? '' : 's'} compared
+                      </p>
+                    </div>
+                    {visibleRows < totalFoodItemGroups && (
+                      <p className="text-xs font-medium text-[#6B6B5F]">First {visibleResultsByItem.length} item groups visible</p>
                     )}
                   </div>
                   <div className="space-y-6 pt-3">
-                    {!hasComparison ? (
-                      <div className="rounded-[24px] border border-[#D8CFBF] bg-[#FFF9EE] p-6 text-center shadow-sm">
-                        <p className="text-sm font-semibold text-[#556B2F]">No comparison available</p>
-                        <p className="mt-2 text-sm text-[#6B6B5F]">
-                          Only one platform option exists for this search.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        {visibleResultsByItem.map(([item, itemGroup]) => {
+                    <>
+                        {visibleResultsByItem.map(([itemKey, itemGroup]) => {
                           const cheapestOption = itemGroup[0];
+                          const item = cheapestOption.item;
                           const cheapestPrice = getFinalPrice(cheapestOption);
                           const highestPrice = Math.max(...itemGroup.map((r) => getFinalPrice(r)));
                           const maxSavings = highestPrice - cheapestPrice;
 
                           return (
-                            <section key={item} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] p-4 shadow-sm">
+                            <section key={itemKey} className="rounded-[20px] border border-[#DDD2BD] bg-[#FFFDF7] p-4 shadow-sm">
                               {/* Header: Restaurant • Item */}
                               <div className="border-b border-[#DDD2BD] pb-3 mb-3">
                                 <h3 className="text-base font-semibold text-[#243119]">
@@ -764,11 +832,10 @@ export default function Home() {
                             </section>
                           );
                         })}
-                      </>
-                    )}
+                    </>
                   </div>
 
-                {visibleRows < filteredResults.length && (
+                {visibleRows < totalFoodItemGroups && (
                   <div className="border-t border-[#DDD2BD] bg-[#FFFDF7] px-4 py-4 text-center">
                     <button
                       type="button"
