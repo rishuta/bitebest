@@ -179,14 +179,32 @@ const run = async () => {
     await connectDB();
     console.log('MongoDB connected');
 
-    // Clear existing
-    await FoodPrice.deleteMany({});
-
     const seedData = generateSeed();
 
-    await FoodPrice.insertMany(seedData);
+    const upsertOperations = seedData.map((record) => ({
+      updateOne: {
+        filter: {
+          restaurant: record.restaurant,
+          item: record.item,
+          platform: record.platform,
+        },
+        update: {
+          $set: {
+            ...record,
+            normalizedRestaurant: normalizeSearch(record.restaurant),
+            normalizedItem: normalizeSearch(record.item),
+            lastUpdated: new Date(),
+          },
+        },
+        upsert: true,
+      },
+    }));
 
-    console.log('Seed data inserted successfully');
+    const result = await FoodPrice.bulkWrite(upsertOperations);
+
+    console.log(
+      `Seed data upserted successfully: ${result.upsertedCount || 0} inserted, ${result.modifiedCount || 0} updated`
+    );
     process.exit(0);
   } catch (err) {
     console.error('Seed failed:', err);

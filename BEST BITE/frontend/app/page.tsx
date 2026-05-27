@@ -129,6 +129,14 @@ const getPlatformIcon = (platform?: string) => {
   return platformIcons[key] || platformIcons.default;
 };
 
+const getPlatformPill = (platform?: string) => {
+  if (platform === 'Swiggy') return { icon: '🟠', background: '#FFF3E0' };
+  if (platform === 'Zomato') return { icon: '🔴', background: '#FDE7E9' };
+  if (platform === 'Magicpin') return { icon: '🟣', background: '#F3E5F5' };
+
+  return { icon: '', background: '#EEF1EB' };
+};
+
 // Deduplication: keep only cheapest per restaurant + item + platform
 const deduplicateResults = (results: FoodPrice[]): FoodPrice[] => {
   const dedupMap = new Map<string, FoodPrice>();
@@ -733,35 +741,28 @@ export default function Home() {
                                 </div>
                               </div>
 
-                              <div className="overflow-hidden rounded-[18px] bg-[#FFFDF7] shadow-sm">
-                                <div className="hidden grid-cols-[1.8fr_70px_70px_70px_84px_90px] gap-3 border-b border-[#E5E1D6] px-3 py-3 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F] sm:grid">
+                              <div className="overflow-x-auto rounded-[14px] bg-[#FFFDF7]">
+                                <div className="min-w-[720px]">
+                                <div className="grid grid-cols-[1.8fr_80px_90px_80px_92px_100px] gap-3 border-b border-[#E5E1D6] px-3 py-3 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#556B2F]">
                                   <span>Platform</span>
-                                  <span>Food</span>
+                                  <span>Base</span>
                                   <span>Delivery</span>
                                   <span>Pack</span>
                                   <span>Discount</span>
                                   <span className="text-right">Final</span>
                                 </div>
-                                <div className="space-y-3 p-3">
+                                <div className="space-y-2 p-3">
                                   {itemGroup.map((result) => {
                                     const cheapestRow = getFinalPrice(result) === cheapestPrice;
+                                    const platformPill = getPlatformPill(result.platform);
 
                                     return (
-                                      <div key={result._id} className={`space-y-3 rounded-[16px] bg-[#FFFDF7] p-3 transition sm:p-4 ${cheapestRow ? 'bg-[#F2F8E9]' : ''}`}>
-                                        <div className="grid gap-3 sm:grid-cols-[1.8fr_70px_70px_70px_84px_90px] items-center">
+                                      <div key={result._id} className={`space-y-3 rounded-[14px] p-3 transition ${cheapestRow ? 'bg-[#F2F8E9] ring-1 ring-[#A8B879]' : 'bg-[#FFFDF7]'}`}>
+                                        <div className="grid grid-cols-[1.8fr_80px_90px_80px_92px_100px] items-center gap-3">
                                           <div className="flex items-center gap-3">
                                             <span
                                               className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold text-[#243119] shadow-sm"
-                                              style={{
-                                                backgroundColor:
-                                                  result.platform === 'Swiggy'
-                                                    ? '#FFF3E0'
-                                                    : result.platform === 'Zomato'
-                                                    ? '#FDE7E9'
-                                                    : result.platform === 'Magicpin'
-                                                    ? '#F3E5F5'
-                                                    : '#EEF1EB',
-                                              }}
+                                              style={{ backgroundColor: platformPill.background }}
                                             >
                                               <span>
                                                 {result.platform === 'Swiggy'
@@ -779,9 +780,9 @@ export default function Home() {
                                             </p>
                                           </div>
 
-                                          <div className="font-semibold text-[#243119]">{formatCurrency(result.foodPrice)}</div>
-                                          <div className="font-semibold text-[#243119]">{formatCurrency(result.deliveryFee || 0)}</div>
-                                          <div className="font-semibold text-[#243119]">{formatCurrency(result.packagingFee || 0)}</div>
+                                          <div className="font-medium text-[#243119]">{formatCurrency(result.foodPrice)}</div>
+                                          <div className="font-medium text-[#243119]">{formatCurrency(result.deliveryFee || 0)}</div>
+                                          <div className="font-medium text-[#243119]">{formatCurrency(result.packagingFee || 0)}</div>
                                           <div className={`font-semibold ${result.discountApplied && result.discountApplied > 0 ? 'text-[#2E7D32]' : 'text-[#6B6B5F]'}`}>
                                             {result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}
                                           </div>
@@ -810,16 +811,16 @@ export default function Home() {
                                         {expandedResultId === result._id && (
                                           <div className="rounded-[16px] bg-[#F5F7ED] p-4 text-sm text-[#243119]">
                                             <div className="grid gap-2 sm:grid-cols-2">
-                                              <div className="flex justify-between"><span>Base Price</span><span>{formatCurrency(result.foodPrice)}</span></div>
-                                              <div className="flex justify-between"><span>Delivery</span><span>{formatCurrency(result.deliveryFee || 0)}</span></div>
-                                              <div className="flex justify-between"><span>Packaging</span><span>{formatCurrency(result.packagingFee || 0)}</span></div>
+                                              <div className="flex justify-between"><span>Food Price</span><span>{formatCurrency(result.foodPrice)}</span></div>
+                                              <div className="flex justify-between"><span>Delivery Fee</span><span>{formatCurrency(result.deliveryFee || 0)}</span></div>
+                                              <div className="flex justify-between"><span>Packaging Fee</span><span>{formatCurrency(result.packagingFee || 0)}</span></div>
                                               <div className="flex justify-between"><span>Discount</span><span className={result.discountApplied && result.discountApplied > 0 ? 'text-[#2E7D32]' : 'text-[#6B6B5F]'}>{result.discountApplied && result.discountApplied > 0 ? `-${formatCurrency(result.discountApplied)}` : 'None'}</span></div>
                                             </div>
                                             <div className="mt-4 rounded-[14px] bg-[#EEF3DF] p-3 text-sm text-[#243119]">
                                               {formatCurrency(result.foodPrice)} + {formatCurrency(result.deliveryFee || 0)} + {formatCurrency(result.packagingFee || 0)} − {formatCurrency(result.discountApplied || 0)} = {formatCurrency(getFinalPrice(result))}
                                             </div>
                                             <div className="mt-3 flex justify-between border-t border-[#DDE7D7] pt-3 font-semibold">
-                                              <span>Final</span>
+                                              <span>Final Price</span>
                                               <span>{formatCurrency(getFinalPrice(result))}</span>
                                             </div>
                                           </div>
@@ -828,6 +829,7 @@ export default function Home() {
                                     );
                                   })}
                                 </div>
+                              </div>
                               </div>
                             </section>
                           );
